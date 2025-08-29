@@ -44,7 +44,7 @@ function displayMessage(msg, type = 'regular') {
     const prefixMap = {
       'system': '[系统提示]',
       'broadcast': '[房主广播]',
-      'hint': '[房主提示]', // 没有该字段，以后使用
+      'hint': '欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。请勿刷屏，刷屏者封禁 IP。', // 废物利用
     };
     const color = type === 'system' ? systemColor : (type === 'broadcast' ? broadcastColor : hintColor);
     const prefix = prefixMap[type] || '';
@@ -68,6 +68,8 @@ window.api.onConnectionSuccess((username) => {
 
 window.api.onConnectionError((errorMsg) => {
   alert(errorMsg);
+  // reload
+  window.location.reload();
 });
 
 window.api.onReceiveMessage((message) => {
@@ -75,7 +77,7 @@ window.api.onReceiveMessage((message) => {
 });
 
 window.api.onReceiveHostHint((message) => {
-  displayMessage(`[房主提示] ${message}`, 'hint');
+  displayMessage(`${message}`, 'hint');
 });
 
 window.api.onReceiveSystemMessage((message) => {

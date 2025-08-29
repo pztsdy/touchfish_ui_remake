@@ -14,7 +14,7 @@ async function fetchLatestVersion() {
     return response.data.trim();
   } catch (error) {
     console.error('Failed to fetch latest version:', error);
-    return 'UNKNOWN';
+    return '获取失败';
   }
 }
 
@@ -24,7 +24,7 @@ async function fetchCanServeVersion() {
     return response.data.trim();
   } catch (error) {
     console.error('Failed to fetch can serve version:', error);
-    return 'UNKNOWN';
+    return '获取失败';
   }
 }
 
@@ -69,8 +69,8 @@ function createWindow() {
       clientSocket.on('data', (data) => {
         const message = data.toString('utf-8').trim(); // 移除首尾空格
         // 根据消息内容判断消息类型，并转发给渲染进程
-        if (message.startsWith('[房主提示]')) {
-          mainWindow.webContents.send('receive-host-hint', message.substring('[房主提示]'.length).trim());
+        if (message.startsWith('欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。请勿刷屏，刷屏者封禁 IP。')) {
+          mainWindow.webContents.send('receive-host-hint', message);
         } else if (message.startsWith('[系统提示]')) {
           mainWindow.webContents.send('receive-system-message', message.substring('[系统提示]'.length).trim());
         } else if (message.startsWith('[房主广播]')) {
