@@ -44,7 +44,7 @@ function displayMessage(msg, type = 'regular') {
     const prefixMap = {
       'system': '[系统提示]',
       'broadcast': '[房主广播]',
-      'hint': '[房主提示]',
+      // 'hint': '[房主提示]', // 没有该字段，以后使用
     };
     const color = type === 'system' ? systemColor : (type === 'broadcast' ? broadcastColor : hintColor);
     const prefix = prefixMap[type] || '';
@@ -62,7 +62,7 @@ window.api.onConnectionSuccess((username) => {
   connectionPage.classList.remove('active');
   connectionPage.classList.add('hidden')
   chatPage.classList.add('active');
-  chatTitle.innerText = `聊天室 - ${username}`;
+  chatTitle.innerText = `Touchfish - ${username}`;
   displayMessage(`已连接到服务器。`, 'system');
 });
 

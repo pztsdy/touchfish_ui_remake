@@ -30,7 +30,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false
     },
-    title: 'Touchfish client remake use Electron',
+    title: 'Touchfish UI Remake',
     icon: 'tchui.ico',
   });
 
