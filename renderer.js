@@ -44,7 +44,7 @@ function displayMessage(msg, type = 'regular') {
     const prefixMap = {
       'system': '[系统提示]',
       'broadcast': '[房主广播]',
-      // 'hint': '[房主提示]', // 没有该字段，以后使用
+      'hint': '[房主提示]', // 没有该字段，以后使用
     };
     const color = type === 'system' ? systemColor : (type === 'broadcast' ? broadcastColor : hintColor);
     const prefix = prefixMap[type] || '';
