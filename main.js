@@ -18,6 +18,16 @@ async function fetchLatestVersion() {
   }
 }
 
+async function fetchCanServeVersion() {
+  try {
+    const response = await axios.get("https://www.piaoztsdy.cn/touchfishui.txt");
+    return response.data.trim();
+  } catch (error) {
+    console.error('Failed to fetch can serve version:', error);
+    return 'UNKNOWN';
+  }
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 600,
@@ -94,7 +104,8 @@ function createWindow() {
   ipcMain.handle('get-versions', async () => {
     const newestVersion = await fetchLatestVersion();
     const currentVersion = app.getVersion();
-    return { newestVersion, currentVersion };
+    const canServeVersion = await fetchCanServeVersion();
+    return { newestVersion, currentVersion, canServeVersion };
   });
 }
 

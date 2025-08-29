@@ -86,8 +86,8 @@ window.api.onReceiveBroadcastMessage((message) => {
   displayMessage(`[房主广播] ${message}`, 'broadcast');
 });
 
-window.api.getVersions().then(({ newestVersion, currentVersion }) => {
-  versionInfo.innerText = `本程序版本: v1.3\n适配的官方服务器（保证稳定性）版本: v1.0\n官方 Python Client 最新版本: ${newestVersion}`;
+window.api.getVersions().then(({ newestVersion, currentVersion, canServeVersion }) => {
+  versionInfo.innerText = `本程序版本: ${currentVersion}\n适配的官方服务器（保证稳定性）版本: ${canServeVersion}\n官方 Python Client 最新版本: ${newestVersion}`;
 });
 
 connectBtn.addEventListener('click', () => {

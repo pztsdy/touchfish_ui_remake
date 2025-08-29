@@ -1,12 +1,15 @@
 # Touchfish Client - Electron Edition
 
+![icon](tchui.ico)
+
 这是一个基于 Electron 重新构建的聊天客户端，旨在提供一个更美观、现代且功能完整的聊天体验。它与原有的 Python 服务器兼容。
 
 ## 截图
 
-暂无，等待更新
-![]()
-![]()
+![连接界面](imgs/connect.png)
+![聊天界面](imgs/chat-main.png)
+![设置界面](imgs/settings.png)
+![更新日志界面](imgs/update-log.png)
 
 ## 功能特点
 
