@@ -1,5 +1,6 @@
 //main.js
 const { app, BrowserWindow, ipcMain } = require('electron');
+const { shell } = require('electron');
 const path = require('path');
 const net = require('net');
 const axios = require('axios');
@@ -106,6 +107,11 @@ function createWindow() {
     const currentVersion = app.getVersion();
     const canServeVersion = await fetchCanServeVersion();
     return { newestVersion, currentVersion, canServeVersion };
+  });
+
+  ipcMain.on('open-link', (event, url) => {
+    shell.openExternal(url);
+    event.preventDefault();
   });
 }
 

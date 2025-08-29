@@ -33,6 +33,7 @@
     <div class="card chat-card">
       <div class="chat-header">
         <h1 id="chat-title">Touchfish UI Remake</h1>
+        <button id="report-bug" class="icon-btn">🧐</button>
         <button id="update-log-btn" class="icon-btn">📝</button>
         <button id="settings-btn" class="icon-btn">⚙️</button>
       </div>
@@ -48,6 +49,10 @@
         <span class="close-btn" id="close-update-log-btn">&times;</span>
         <h2>更新日志</h2>
         <pre id="update-log-content">
+          v1.4.0:
+           修复字体无法显示的bug
+           添加bug反馈功能
+           添加连接界面输入占位符
           v1.3.2:
            增加官方服务器支持
            优化使用官方服务器体验
@@ -91,6 +96,29 @@
           <label for="hint-color">房主提示颜色:</label>
           <input type="color" id="hint-color" value="#ADD8E6">
         </div>
+      </div>
+    </div>
+
+    <div id="report-modal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-btn" id="close-report-btn">&times;</span>
+        <h2>报告错误</h2>
+        <form id="report-form">
+          <div class="form-group">
+            <label for="report-description">描述:</label>
+            <!-- 输入框长度 -->
+            <textarea id="report-description" rows="11" placeholder="请详细描述您遇到的问题..." style="width: 100%;">
+### 触发步骤
+（请描述你是怎么操作时发生的）
+
+### 当前版本
+v1.4.0
+
+### 系统信息
+平台: e.g. Windows 10</textarea>
+          </div>
+          <button type="submit" class="main-btn" id="report-submit-btn">提交报告</button>
+        </form>
       </div>
     </div>
   </div>

@@ -19,6 +19,11 @@ const updatelogBtn = document.getElementById('update-log-btn');
 const updateLogModal = document.getElementById('update-log-modal');
 const closeUpdateLogBtn = document.getElementById('close-update-log-btn');
 
+const reportbugsBtn = document.getElementById('report-bug');
+const reportModal = document.getElementById('report-modal');
+const closeReportBtn = document.getElementById('close-report-btn');
+const reportsubmitBtn = document.getElementById('report-submit-btn');
+
 let systemColor = '#87CEEB';
 let broadcastColor = '#90EE90';
 let hintColor = '#ADD8E6';
@@ -136,6 +141,22 @@ updatelogBtn.addEventListener('click', () => {
 
 closeUpdateLogBtn.addEventListener('click', () => {
   updateLogModal.classList.remove('active');
+});
+
+reportbugsBtn.addEventListener('click', () => {
+  reportModal.classList.add('active');
+});
+
+closeReportBtn.addEventListener('click', () => {
+  reportModal.classList.remove('active');
+});
+
+reportsubmitBtn.addEventListener('click', (event) => {
+  event.preventDefault();
+  const description = document.getElementById('report-description').value.trim();
+  const url = `https://github.com/pztsdy/touchfish_ui_remake/issues/new?body=${encodeURIComponent(description)}`;
+  alert('感谢你的反馈！我们会尽快处理你的问题。');
+  window.api.openLink(url);
 });
 
 function updateColor(type) {

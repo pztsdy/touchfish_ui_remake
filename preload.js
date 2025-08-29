@@ -11,5 +11,6 @@ contextBridge.exposeInMainWorld('api', {
 
   onReceiveHostHint: (callback) => ipcRenderer.on('receive-host-hint', (event, message) => callback(message)),
   onReceiveSystemMessage: (callback) => ipcRenderer.on('receive-system-message', (event, message) => callback(message)),
-  onReceiveBroadcastMessage: (callback) => ipcRenderer.on('receive-broadcast-message', (event, message) => callback(message))
+  onReceiveBroadcastMessage: (callback) => ipcRenderer.on('receive-broadcast-message', (event, message) => callback(message)),
+  openLink: (url) => ipcRenderer.send('open-link', url)
 });
