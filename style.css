@@ -1,5 +1,17 @@
 /* style.css */
 
+@font-face {
+  font-family: 'Maple Mono NF CN Light';
+  src: url('mmnfcnl.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+#messages,
+textarea {
+  font-family: 'Maple Mono NF CN Light', monospace, sans-serif;
+}
+
 /* 通用样式 */
 body {
   font-family: 'Segoe UI', Arial, sans-serif;
