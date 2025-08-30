@@ -136,7 +136,7 @@ function createWindow() {
   ipcMain.handle('check-for-updates', async () => {
     var latestRemakeVersion = await fetchUIRemakeLatestVersion();
     const currentVersion = app.getVersion();
-    const hasUpdate = latestRemakeVersion === currentVersion;
+    const hasUpdate = latestRemakeVersion.tag_name === currentVersion;
     return { latestRemakeVersion: latestRemakeVersion.tag_name, currentVersion, hasUpdate };
   });
 }
