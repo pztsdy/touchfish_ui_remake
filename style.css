@@ -361,3 +361,32 @@ input[type="number"]:focus {
 .active {
   display: block;
 }
+
+.message-item p {
+  margin: 0;
+}
+
+.message-item pre {
+  margin: 4px 0;
+}
+
+code,
+pre {
+  font-family: "Consolas", "Lucida Console", monospace !important;
+  font-size: 14px;
+}
+
+.msg-text {
+  font-family: "Maple Mono NF CN Light", sans-serif;
+}
+
+#md-editor-container {
+  font-family: "Maple Mono NF CN Light", monospace;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  overflow-y: auto;
+  padding: 4px;
+  min-height: 60px;
+  max-height: 150px;
+}

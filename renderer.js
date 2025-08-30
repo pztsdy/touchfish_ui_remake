@@ -6,7 +6,6 @@ const sendBtn = document.getElementById('send-btn');
 const ipInput = document.getElementById('ip');
 const portInput = document.getElementById('port');
 const usernameInput = document.getElementById('username');
-const messageInput = document.getElementById('message-input');
 const messagesDiv = document.getElementById('messages');
 const chatTitle = document.getElementById('chat-title');
 const versionInfo = document.getElementById('version-info');
@@ -24,15 +23,19 @@ const reportModal = document.getElementById('report-modal');
 const closeReportBtn = document.getElementById('close-report-btn');
 const reportsubmitBtn = document.getElementById('report-submit-btn');
 
+const messageInput = document.getElementById('message-input');
+const mdEditor = new MarkdownPalettes(messageInput);
+
 let systemColor = '#87CEEB';
 let broadcastColor = '#90EE90';
 let hintColor = '#ADD8E6';
 let currentUsername = null;
 
-// 在脚本加载时立即设置默认状态
 connectionPage.classList.add('active');
-chatPage.classList.remove('active');
-settingsModal.classList.remove('active');
+chatPage.classList.add('hidden');
+settingsModal.classList.add('hidden');
+updateLogModal.classList.add('hidden');
+reportModal.classList.add('hidden');
 
 function getHHMMSS() {
   const now = new Date();
@@ -45,27 +48,46 @@ function displayMessage(msg, type = 'regular') {
   messageEl.className = `message-item ${type}`;
   const timestamp = `<span>[${getHHMMSS()}]</span> `;
 
-  if (type !== 'regular') {
+  const isAtBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 5;
+
+  if (type === 'regular') {
+    window.api.marked(msg).then((rendered) => {
+      messageEl.innerHTML = `${timestamp}<span class="msg-text">${rendered}</span>`;
+      messagesDiv.appendChild(messageEl);
+      if (isAtBottom) {
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+    });
+  } else {
     const prefixMap = {
       'system': '[系统提示]',
       'broadcast': '[房主广播]',
-      'hint': '欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。请勿刷屏，刷屏者封禁 IP。', // 废物利用
+      'hint': '欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。请勿刷屏，刷屏者封禁 IP。',
     };
     const color = type === 'system' ? systemColor : (type === 'broadcast' ? broadcastColor : hintColor);
     const prefix = prefixMap[type] || '';
-    const content = msg.startsWith(prefix) ? msg.replace(prefix, '').trim() : msg;
-    messageEl.innerHTML = `${timestamp}<span style="color: ${color};">${prefix}</span> ${content}`;
-  } else {
-    messageEl.innerHTML = `${timestamp}<span>${msg}</span>`;
-  }
 
-  messagesDiv.appendChild(messageEl);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    let displayedContent = msg;
+    if (msg.startsWith(prefix)) {
+      const contentWithoutPrefix = msg.substring(prefix.length).trim();
+      displayedContent = `<span style="color:${color};">${prefix}</span> ${contentWithoutPrefix}`;
+    } else {
+      displayedContent = `<span style="color:${color};">${msg}</span>`;
+    }
+
+    messageEl.innerHTML = `${timestamp}${displayedContent}`;
+    messagesDiv.appendChild(messageEl);
+
+    if (isAtBottom) {
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  }
 }
 
 window.api.onConnectionSuccess((username) => {
   connectionPage.classList.remove('active');
-  connectionPage.classList.add('hidden')
+  connectionPage.classList.add('hidden');
+  chatPage.classList.remove('hidden');
   chatPage.classList.add('active');
   chatTitle.innerText = `Touchfish - ${username}`;
   displayMessage(`已连接到服务器。`, 'system');
@@ -73,7 +95,6 @@ window.api.onConnectionSuccess((username) => {
 
 window.api.onConnectionError((errorMsg) => {
   alert(errorMsg);
-  // reload
   window.location.reload();
 });
 
@@ -82,15 +103,15 @@ window.api.onReceiveMessage((message) => {
 });
 
 window.api.onReceiveHostHint((message) => {
-  displayMessage(`${message}`, 'hint');
+  displayMessage(message, 'hint');
 });
 
 window.api.onReceiveSystemMessage((message) => {
-  displayMessage(`[系统提示] ${message}`, 'system');
+  displayMessage(message, 'system');
 });
 
 window.api.onReceiveBroadcastMessage((message) => {
-  displayMessage(`[房主广播] ${message}`, 'broadcast');
+  displayMessage(message, 'broadcast');
 });
 
 window.api.getVersions().then(({ newestVersion, currentVersion, canServeVersion }) => {
@@ -110,22 +131,24 @@ connectBtn.addEventListener('click', () => {
   window.api.connectToServer({ ip, port, username });
 });
 
-sendBtn.addEventListener('click', sendMessage);
+sendBtn.addEventListener('click', () => {
+  const message = mdEditor.content.trim();
+  if (!message) return;
+  window.api.sendMessage(`${currentUsername}: ${message}`);
+  mdEditor.content = ""; // 发送后清空编辑器
+});
 
 messageInput.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key === 'Enter') {
-    sendMessage();
+    const message = mdEditor.content.trim();
+    if (!message) return;
+    window.api.sendMessage(`${currentUsername}: ${message}`);
+    mdEditor.content = "";
+    e.preventDefault();
   }
 });
 
-function sendMessage() {
-  const message = messageInput.value.trim();
-  if (!message) return;
-  // 由于有屏蔽词，所以等待返回（否则会被骂ShadowBan）
-  // displayMessage(`${currentUsername}: ${message}`, 'regular');
-  window.api.sendMessage(`${currentUsername}: ${message}`);
-  messageInput.value = '';
-}
+// ---- 模态框功能 ----
 
 settingsBtn.addEventListener('click', () => {
   settingsModal.classList.add('active');
@@ -157,6 +180,7 @@ reportsubmitBtn.addEventListener('click', (event) => {
   const url = `https://github.com/pztsdy/touchfish_ui_remake/issues/new?body=${encodeURIComponent(description)}`;
   alert('感谢你的反馈！我们会尽快处理你的问题。');
   window.api.openLink(url);
+  reportModal.classList.remove('active');
 });
 
 function updateColor(type) {

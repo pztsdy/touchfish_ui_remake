@@ -5,10 +5,11 @@
   <meta charset="UTF-8">
   <title>Touchfish UI Remake</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="node_modules/github-markdown-css/github-markdown.css">
 </head>
 
 <body>
-  <div id="connection-page" class="active">
+  <div id="connection-page" class="page-container active">
     <div class="card">
       <h1 class="title">连接服务器</h1>
       <div class="form-group">
@@ -29,7 +30,7 @@
     </div>
   </div>
 
-  <div id="chat-page" class="hidden">
+  <div id="chat-page" class="page-container hidden">
     <div class="card chat-card">
       <div class="chat-header">
         <h1 id="chat-title">Touchfish UI Remake</h1>
@@ -37,9 +38,13 @@
         <button id="update-log-btn" class="icon-btn">📝</button>
         <button id="settings-btn" class="icon-btn">⚙️</button>
       </div>
-      <div id="messages" class="messages" style="overflow-y: auto; max-height: 350px; font-family: 'Maple Mono NF CN Light';"></div>
+      <div id="messages" class="messages markdown-body" style="min-height: 300px;"></div>
       <div class="chat-footer">
-        <textarea id="message-input" placeholder="输入消息..." rows="2" style="font-family: 'Maple Mono NF CN Light';"></textarea>
+        <div id="md-editor-container" class="md-editor-container" style="min-height: 220px;">
+          <div style="height: auto;" id="message-input" class="md-input" contenteditable="true" placeholder="输入消息..."></div>
+        </div>
+        <link rel="stylesheet" href="dist/markdown-palettes.css">
+        <script src="dist/markdown-palettes.js"></script>
         <button id="send-btn" class="main-btn">发送</button>
       </div>
     </div>
@@ -48,35 +53,36 @@
       <div class="modal-content">
         <span class="close-btn" id="close-update-log-btn">&times;</span>
         <h2>更新日志</h2>
-        <pre id="update-log-content">
-          v1.4.0:
-           修复字体无法显示的bug
-           添加bug反馈功能
-           添加连接界面输入占位符
-          v1.3.2:
-           增加官方服务器支持
-           优化使用官方服务器体验
-           适配长度截断
-          v1.3.1:
-           更改联网获取支持的服务器版本(piaoztsdy.cn/touchfishui.txt)
-           支持官方Server v1.1.1版本
-          v1.3.0:
-           修复了空行Bug
-          v1.2.0:
-           添加了更新日志功能
-           适配服务端屏蔽词功能
-           增加了消息内容中的滚动条
-           将更改颜色设置体验优化
-           更改字体样式
-           修复刷新窗口的bug(禁用刷新)
-          v1.1.0:
-           模态框样式优化
-           添加了设置颜色功能
-           对系统消息等特殊消息进行颜色更改
-          v1.0.0:
-           优化登陆界面
-           更改聊天气泡样式
-        </pre>
+        <pre id="update-log-content" class="update-log-content">
+v1.5.0-pre:
+ 添加Markdown功能(输入&查看)
+v1.4.0:
+ 修复字体无法显示的bug
+ 添加bug反馈功能
+ 添加连接界面输入占位符
+v1.3.2:
+ 增加官方服务器支持
+ 优化使用官方服务器体验
+ 适配长度截断
+v1.3.1:
+ 更改联网获取支持的服务器版本(piaoztsdy.cn/touchfishui.txt)
+ 支持官方Server v1.1.1版本
+v1.3.0:
+ 修复了空行Bug
+v1.2.0:
+ 添加了更新日志功能
+ 适配服务端屏蔽词功能
+ 增加了消息内容中的滚动条
+ 将更改颜色设置体验优化
+ 更改字体样式
+ 修复刷新窗口的bug(禁用刷新)
+v1.1.0:
+ 模态框样式优化
+ 添加了设置颜色功能
+ 对系统消息等特殊消息进行颜色更改
+v1.0.0:
+ 优化登陆界面
+ 更改聊天气泡样式</pre>
       </div>
     </div>
 
@@ -106,9 +112,7 @@
         <form id="report-form">
           <div class="form-group">
             <label for="report-description">描述:</label>
-            <!-- 输入框长度 -->
-            <textarea id="report-description" rows="11" placeholder="请详细描述您遇到的问题..." style="width: 100%;">
-### 触发步骤
+            <textarea id="report-description" style="width: 395;" rows="11" placeholder="请详细描述您遇到的问题..." class="report-description">### 触发步骤
 （请描述你是怎么操作时发生的）
 
 ### 当前版本
@@ -122,7 +126,6 @@ v1.4.0
       </div>
     </div>
   </div>
-
   <script src="renderer.js"></script>
 </body>
 

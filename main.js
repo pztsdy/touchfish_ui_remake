@@ -31,8 +31,8 @@ async function fetchCanServeVersion() {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 600,
-    height: 680,
+    width: 820,
+    height: 800,
     minWidth: 400,
     minHeight: 300,
     autoHideMenuBar: true,
@@ -98,7 +98,7 @@ function createWindow() {
 
   ipcMain.on('send-message', (event, message) => {
     if (clientSocket) {
-      clientSocket.write(message + '\n'); // 发送给服务器
+      clientSocket.write(message); // 发送给服务器
     }
   });
 
@@ -112,6 +112,11 @@ function createWindow() {
   ipcMain.on('open-link', (event, url) => {
     shell.openExternal(url);
     event.preventDefault();
+  });
+
+  ipcMain.handle('marked', async (_event, text) => {
+    const { marked } = await import('marked');
+    return marked(text).trim();
   });
 }
 
