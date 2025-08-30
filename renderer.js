@@ -23,6 +23,11 @@ const reportModal = document.getElementById('report-modal');
 const closeReportBtn = document.getElementById('close-report-btn');
 const reportsubmitBtn = document.getElementById('report-submit-btn');
 
+const checkUpdateBtn = document.getElementById('check-update');
+const checkUpdateModal = document.getElementById('check-update-modal');
+const closeCheckUpdateBtn = document.getElementById('close-check-update-btn');
+const checkUpdateContent = document.getElementById('check-update-content');
+
 const messageInput = document.getElementById('message-input');
 const mdEditor = new MarkdownPalettes(messageInput);
 
@@ -115,7 +120,7 @@ window.api.onReceiveBroadcastMessage((message) => {
 });
 
 window.api.getVersions().then(({ newestVersion, currentVersion, canServeVersion }) => {
-  versionInfo.innerText = `本程序版本: ${currentVersion}\n适配的官方服务器（保证稳定性）版本: ${canServeVersion}\n官方 Python Client 最新版本: ${newestVersion}`;
+  versionInfo.innerText = `本程序版本: ${currentVersion}\n适配的官方服务器（保证稳定性）版本: v1.1.1 (防断连版本)\n官方 Python Client 最新版本: ${newestVersion}`;
 });
 
 connectBtn.addEventListener('click', () => {
@@ -172,6 +177,21 @@ reportbugsBtn.addEventListener('click', () => {
 
 closeReportBtn.addEventListener('click', () => {
   reportModal.classList.remove('active');
+});
+
+checkUpdateBtn.addEventListener('click', () => {
+  checkUpdateModal.classList.add('active');
+  window.api.checkForUpdates().then(({ latestRemakeVersion, currentVersion, hasUpdate }) => {
+    if (! hasUpdate) {
+      checkUpdateContent.innerText = `发现新版本: ${latestRemakeVersion}\n当前版本: ${currentVersion}`;
+    } else {
+      checkUpdateContent.innerText = `当前已是最新版本: ${currentVersion}`;
+    }
+  });
+});
+
+closeCheckUpdateBtn.addEventListener('click', () => {
+  checkUpdateModal.classList.remove('active');
 });
 
 reportsubmitBtn.addEventListener('click', (event) => {

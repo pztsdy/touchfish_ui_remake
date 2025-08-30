@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('api', {
   onConnectionClosed: (callback) => ipcRenderer.on('connection-closed', callback),
   sendMessage: (message) => ipcRenderer.send('send-message', message),
   getVersions: () => ipcRenderer.invoke('get-versions'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
 
   onReceiveHostHint: (callback) => ipcRenderer.on('receive-host-hint', (event, message) => callback(message)),
   onReceiveSystemMessage: (callback) => ipcRenderer.on('receive-system-message', (event, message) => callback(message)),

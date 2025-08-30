@@ -29,6 +29,20 @@ async function fetchCanServeVersion() {
   }
 }
 
+async function fetchUIRemakeLatestVersion() {
+  try {
+    const response = await axios.get("https://api.github.com/repos/pztsdy/touchfish_ui_remake/releases/latest", {
+      headers: {
+        'User-Agent': 'Node.js-Get-Request'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch UI Remake latest version:', error);
+    return '获取失败';
+  }
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 820,
@@ -117,6 +131,13 @@ function createWindow() {
   ipcMain.handle('marked', async (_event, text) => {
     const { marked } = await import('marked');
     return marked(text).trim();
+  });
+
+  ipcMain.handle('check-for-updates', async () => {
+    var latestRemakeVersion = await fetchUIRemakeLatestVersion();
+    const currentVersion = app.getVersion();
+    const hasUpdate = latestRemakeVersion === currentVersion;
+    return { latestRemakeVersion: latestRemakeVersion.tag_name, currentVersion, hasUpdate };
   });
 }
 

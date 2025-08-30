@@ -124,6 +124,7 @@ input[type="number"]:focus {
   transition: background-color 0.3s;
   font-weight: 600;
   margin-top: 20px;
+  display: block;
 }
 
 .main-btn:hover {
