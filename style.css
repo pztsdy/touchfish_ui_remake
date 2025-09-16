@@ -7,6 +7,26 @@
   font-style: normal;
 }
 
+/*
+@font-face {
+  font-family: 'KaTeX_Main';
+  src: url('node_modules/katex/dist/fonts/KaTeX_Main-Regular.woff2') format('woff2'),
+    url('node_modules/katex/dist/fonts/KaTeX_Main-Regular.woff') format('woff'),
+    url('node_modules/katex/dist/fonts/KaTeX_Main-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'KaTeX_Math';
+  src: url('node_modules/katex/dist/fonts/KaTeX_Math-Italic.woff2') format('woff2'),
+    url('node_modules/katex/dist/fonts/KaTeX_Math-Italic.woff') format('woff'),
+    url('node_modules/katex/dist/fonts/KaTeX_Math-Italic.ttf') format('truetype');
+  font-weight: normal;
+  font-style: italic;
+}
+  */
+
 #messages,
 textarea {
   font-family: 'Maple Mono NF CN Light', monospace, sans-serif;
@@ -231,8 +251,7 @@ input[type="number"]:focus {
   /* 提示消息的背景色 */
 }
 
-
-.message-item span:first-child {
+.message-item span.timestamp {
   color: #9AA0A6;
   /* 时间戳颜色 */
   font-weight: 500;
@@ -246,7 +265,6 @@ input[type="number"]:focus {
   /* 确保子元素垂直拉伸以填充容器的高度 */
   padding-top: 10px;
   border-top: 1px solid #DADCE0;
-  /* 分隔线 */
 }
 
 #message-input {
@@ -390,4 +408,68 @@ pre {
   padding: 4px;
   min-height: 60px;
   max-height: 150px;
+}
+
+/* KaTeX样式修复 
+.katex {
+  font-size: 1.2em;
+  line-height: 1.3;
+}
+*/
+
+.katex-display {
+  margin: 0.5em 0;
+  /*
+  text-align: center;
+  */
+  padding: 0.5em;
+  background-color: #f8f9fa;
+  border-radius: 7px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+  max-width: 100%;
+  color: #000;
+}
+
+/* 行内公式样式 */
+.katex-inline {
+  display: inline;
+}
+
+/* 数学符号样式优化 
+.katex .katex-operator {
+  margin-right: 0.2em;
+  margin-left: 0.2em;
+}
+
+.katex .katex-fraction {
+  vertical-align: middle;
+}
+
+.katex .katex-numerator,
+.katex .katex-denominator {
+  display: inline-block;
+  padding: 0.1em 0;
+  text-align: center;
+}
+*/
+
+/* 确保数学公式不会被截断 */
+.msg-text .katex-display {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* 行内公式容器 */
+.msg-text .katex-inline {
+  display: inline;
+  /*
+  vertical-align: middle;
+  min-height: 1em;
+  */
+}
+
+/* hljs字体 */
+.hljs {
+  font-family: 'Maple Mono NF CN' !important;
 }

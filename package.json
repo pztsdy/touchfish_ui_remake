@@ -1,11 +1,12 @@
 {
   "name": "touchfish-ui-remake",
-  "version": "1.5.0-pre1",
+  "version": "1.5.0-pre3",
   "description": "A beautiful, modern touchfish client built with Electron.",
   "main": "main.js",
+  "type": "module",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "dist": "electron-builder"
   },
   "keywords": [
     "Electron",
@@ -22,9 +23,15 @@
     "dompurify": "^3.2.6",
     "express": "^5.1.0",
     "github-markdown-css": "^5.8.1",
+    "highlight.js": "^11.11.1",
     "jsdom": "^26.1.0",
-    "markdown-palettes": "^0.4.13",
-    "marked": "^16.2.1"
+    "katex": "^0.16.22",
+    "markdown-it": "^14.1.0",
+    "markdown-it-emoji": "^3.0.0",
+    "markdown-it-highlightjs": "^4.2.0",
+    "markdown-it-katex": "^2.0.3",
+    "markdown-it-texmath": "^1.0.0",
+    "markdown-palettes": "^0.4.13"
   },
   "devDependencies": {
     "electron": "^31.7.7",

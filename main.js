@@ -1,13 +1,96 @@
 //main.js
-const { app, BrowserWindow, ipcMain } = require('electron');
-const { shell } = require('electron');
-const path = require('path');
-const net = require('net');
-const axios = require('axios');
+/*
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import MarkdownIt from 'markdown-it';
+import * as markdownItEmoji from 'markdown-it-emoji';
+import net from 'net';
+import axios from 'axios';
+import { shell } from 'electron';
+import markdownItHighlightjs from 'markdown-it-highlightjs';
+import hljs from 'highlight.js';
+import katex from 'katex';
+*/
+import { app, BrowserWindow, ipcMain } from 'electron';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import net from 'net';
+import axios from 'axios';
+import { shell } from 'electron';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+let md = null;
+let isInitializing = false;
+let initializationPromise = null;
+
+/*
+const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: true,
+}).use(markdownItEmoji.light)
+  .use(markdownItHighlightjs)
+  .use(require('markdown-it-katex'));
+*/
 
 let mainWindow;
 let clientSocket;
 let currentUsername = null; // 新增一个变量来保存当前用户名
+
+async function initializeMarkdown() {
+  if (md) return md;
+
+  try {
+    const { default: MarkdownIt } = await import('markdown-it');
+    const markdownItEmoji = await import('markdown-it-emoji');
+    const markdownItHighlightjs = await import('markdown-it-highlightjs');
+    const markdownItKatex = await import('markdown-it-katex');
+
+    // 配置KaTeX选项
+    const katexOptions = {
+      throwOnError: false,
+      displayMode: false,
+      strict: false,
+      output: 'mathml',
+      maxSize: 5000, // 增加最大尺寸限制
+      maxDepth: 200, // 增加最大深度限制
+    };
+
+    md = new MarkdownIt({
+      html: true,
+      linkify: true,
+      typographer: true,
+      highlight: function (str, lang) {
+        if (lang && hljs.getLanguage(lang)) {
+          try {
+            return hljs.highlight(str, { language: lang }).value;
+          } catch (__) { }
+        }
+        return ''; // 使用外部默认转义
+      }
+    })
+      .use(markdownItEmoji.light)
+      .use(markdownItHighlightjs.default)
+      .use(markdownItKatex.default, katexOptions);
+
+    console.log('Markdown初始化成功');
+  } catch (error) {
+    console.error('Markdown初始化失败:', error);
+    // 降级到基础Markdown
+    try {
+      const { default: MarkdownIt } = await import('markdown-it');
+      md = new MarkdownIt();
+    } catch (fallbackError) {
+      console.error('Markdown降级初始化也失败:', fallbackError);
+      md = { render: (text) => text };
+    }
+  }
+
+  return md;
+}
 
 async function fetchLatestVersion() {
   try {
@@ -39,6 +122,17 @@ async function fetchUIRemakeLatestVersion() {
     return response.data;
   } catch (error) {
     console.error('Failed to fetch UI Remake latest version:', error);
+    return '获取失败';
+  }
+}
+
+async function fetchNotice() {
+  try {
+    const response = await axios.get("https://www.piaoztsdy.cn/tfurnotice.txt");
+    // 用||分割通知内容
+    return response.data.split('||');
+  } catch (error) {
+    console.error('Failed to fetch notice:', error);
     return '获取失败';
   }
 }
@@ -83,7 +177,6 @@ function createWindow() {
 
       clientSocket.on('data', (data) => {
         const message = data.toString('utf-8').trim(); // 移除首尾空格
-        // 根据消息内容判断消息类型，并转发给渲染进程
         if (message.startsWith('欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。请勿刷屏，刷屏者封禁 IP。')) {
           mainWindow.webContents.send('receive-host-hint', message);
         } else if (message.startsWith('[系统提示]')) {
@@ -128,9 +221,16 @@ function createWindow() {
     event.preventDefault();
   });
 
-  ipcMain.handle('marked', async (_event, text) => {
-    const { marked } = await import('marked');
-    return marked(text).trim();
+  ipcMain.handle('markdownit', async (_event, text) => {
+    if (!md) {
+      await initializeMarkdown();
+    }
+    try {
+      return md.render(text);
+    } catch (error) {
+      console.error('Markdown渲染错误:', error);
+      return text;
+    }
   });
 
   ipcMain.handle('check-for-updates', async () => {
@@ -138,6 +238,11 @@ function createWindow() {
     const currentVersion = app.getVersion();
     const hasUpdate = latestRemakeVersion.tag_name === currentVersion;
     return { latestRemakeVersion: latestRemakeVersion.tag_name, currentVersion, hasUpdate };
+  });
+
+  ipcMain.handle('get-notice', async () => {
+    const notice = await fetchNotice();
+    return notice;
   });
 }
 

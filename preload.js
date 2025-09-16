@@ -10,10 +10,11 @@ contextBridge.exposeInMainWorld('api', {
   sendMessage: (message) => ipcRenderer.send('send-message', message),
   getVersions: () => ipcRenderer.invoke('get-versions'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  getNotice: () => ipcRenderer.invoke('get-notice'),
 
   onReceiveHostHint: (callback) => ipcRenderer.on('receive-host-hint', (event, message) => callback(message)),
   onReceiveSystemMessage: (callback) => ipcRenderer.on('receive-system-message', (event, message) => callback(message)),
   onReceiveBroadcastMessage: (callback) => ipcRenderer.on('receive-broadcast-message', (event, message) => callback(message)),
   openLink: (url) => ipcRenderer.send('open-link', url),
-  marked: (text) => ipcRenderer.invoke('marked', text),
+  markdownit: (text) => ipcRenderer.invoke('markdownit', text),
 });

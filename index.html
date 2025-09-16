@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="zh-cn">
 
@@ -7,6 +8,8 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="node_modules/github-markdown-css/github-markdown.css">
   <link rel="stylesheet" href="dist/markdown-palettes.css">
+  <link rel="stylesheet" href="node_modules/katex/dist/katex.css">
+  <link rel="stylesheet" href="node_modules/highlight.js/styles/github.css">
 </head>
 
 <body>
@@ -15,11 +18,11 @@
       <h1 class="title">连接服务器</h1>
       <div class="form-group">
         <label for="ip">服务器IP:</label>
-        <input type="text" id="ip" value="127.0.0.1" placeholder="例如: 127.0.0.1">
+        <input type="text" id="ip" value="bopid.cn" placeholder="例如: 127.0.0.1">
       </div>
       <div class="form-group">
         <label for="port">端口:</label>
-        <input type="number" id="port" value="8080" placeholder="例如: 8080">
+        <input type="number" id="port" value="7001" placeholder="例如: 8080">
       </div>
       <div class="form-group">
         <label for="username">用户名:</label>
@@ -35,6 +38,7 @@
     <div class="card chat-card">
       <div class="chat-header">
         <h1 id="chat-title">Touchfish UI Remake</h1>
+        <button id="get-notice" class="icon-btn">📰</button>
         <button id="check-update" class="icon-btn">🔄</button>
         <button id="report-bug" class="icon-btn">🧐</button>
         <button id="update-log-btn" class="icon-btn">📝</button>
@@ -55,6 +59,8 @@
         <span class="close-btn" id="close-update-log-btn">&times;</span>
         <h2>更新日志</h2>
         <pre id="update-log-content" class="update-log-content">
+v1.5.0-preN:
+ LaTeX+代码渲染
 v1.5.0-pre:
  添加Markdown功能(输入&查看)
 v1.4.0:
@@ -134,7 +140,14 @@ v1.5.0
         <pre id="check-update-content" class="check-update-content">正在检查更新...</pre>
       </div>
     </div>
-  </div>
+
+    <div id="notice-modal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-btn" id="close-notice-btn">&times;</span>
+        <h2>系统公告</h2>
+        <ul id="notice-content" class="notice-content"></ul>
+      </div>
+    </div>
   <script src="renderer.js"></script>
 </body>
 

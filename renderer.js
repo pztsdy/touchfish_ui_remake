@@ -28,6 +28,11 @@ const checkUpdateModal = document.getElementById('check-update-modal');
 const closeCheckUpdateBtn = document.getElementById('close-check-update-btn');
 const checkUpdateContent = document.getElementById('check-update-content');
 
+const getNoticeBtn = document.getElementById('get-notice');
+const noticeModal = document.getElementById('notice-modal');
+const closeNoticeBtn = document.getElementById('close-notice-btn');
+const noticeContent = document.getElementById('notice-content');
+
 const messageInput = document.getElementById('message-input');
 const mdEditor = new MarkdownPalettes(messageInput);
 
@@ -48,45 +53,93 @@ function getHHMMSS() {
   return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 }
 
-function displayMessage(msg, type = 'regular') {
+function displayMessage(msg, type = 'regular', username = null) {
+  if (!msg || typeof msg !== 'string') return;
+
   const messageEl = document.createElement('div');
   messageEl.className = `message-item ${type}`;
-  const timestamp = `<span>[${getHHMMSS()}]</span> `;
+
+  const now = new Date();
+  const timestamp = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
+  const timestampHtml = `<span class="timestamp">${timestamp}</span>`;
 
   const isAtBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 5;
 
-  if (type === 'regular') {
-    window.api.marked(msg).then((rendered) => {
-      messageEl.innerHTML = `${timestamp}<span class="msg-text">${rendered}</span>`;
-      messagesDiv.appendChild(messageEl);
-      if (isAtBottom) {
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  try {
+    if (type === 'regular') {
+      // 处理普通消息 - 解析发送者和内容
+      let sender = username || "匿名";
+      let content = msg;
+
+      // 如果消息包含标准格式 "用户名: 内容"
+      if (msg.includes(': ')) {
+        const colonIndex = msg.indexOf(': ');
+        const potentialSender = msg.substring(0, colonIndex);
+        // 简单验证发送者名称（避免误解析）
+        if (potentialSender.length > 0 && potentialSender.length < 30) {
+          sender = potentialSender;
+          content = msg.substring(colonIndex + 2);
+        }
       }
-    });
-  } else {
-    const prefixMap = {
-      'system': '[系统提示]',
-      'broadcast': '[房主广播]',
-      'hint': '欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。请勿刷屏，刷屏者封禁 IP。',
-    };
-    const color = type === 'system' ? systemColor : (type === 'broadcast' ? broadcastColor : hintColor);
-    const prefix = prefixMap[type] || '';
 
-    let displayedContent = msg;
-    if (msg.startsWith(prefix)) {
-      const contentWithoutPrefix = msg.substring(prefix.length).trim();
-      displayedContent = `<span style="color:${color};">${prefix}</span> ${contentWithoutPrefix}`;
+      // 渲染Markdown内容（已包含数学公式和代码高亮）
+      window.api.markdownit(content).then(rendered => {
+        messageEl.innerHTML = `${timestampHtml} <strong class="sender">${sender}:</strong> <span class="msg-text">${rendered}</span>`;
+        messagesDiv.appendChild(messageEl);
+        if (isAtBottom) messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }).catch(error => {
+        // Markdown渲染失败时的降级处理
+        console.error('Markdown渲染失败:', error);
+        messageEl.innerHTML = `${timestampHtml} <strong class="sender">${sender}:</strong> <span class="msg-text">${escapeHtml(content)}</span>`;
+        messagesDiv.appendChild(messageEl);
+        if (isAtBottom) messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+
     } else {
-      displayedContent = `<span style="color:${color};">${msg}</span>`;
-    }
+      // 处理系统消息、广播消息等（保持原有逻辑）
+      const colorMap = {
+        'system': systemColor,
+        'broadcast': broadcastColor,
+        'hint': hintColor
+      };
 
-    messageEl.innerHTML = `${timestamp}${displayedContent}`;
+      const prefixMap = {
+        'system': '[系统提示]',
+        'broadcast': '[房主广播]',
+        'hint': '欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。请勿刷屏，刷屏者封禁 IP。'
+      };
+
+      const color = colorMap[type] || '#333333';
+      const prefix = prefixMap[type] || '';
+
+      let displayedContent = msg;
+
+      // 如果消息以特定前缀开头，进行特殊处理
+      if (prefix && msg.startsWith(prefix)) {
+        const contentWithoutPrefix = msg.substring(prefix.length).trim();
+        displayedContent = `<span style="color:${color}; font-weight: bold;">${prefix}</span> ${escapeHtml(contentWithoutPrefix)}`;
+      } else {
+        displayedContent = `<span style="color:${color};">${escapeHtml(msg)}</span>`;
+      }
+
+      messageEl.innerHTML = `${timestampHtml} ${displayedContent}`;
+      messagesDiv.appendChild(messageEl);
+      if (isAtBottom) messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  } catch (error) {
+    console.error('消息显示错误:', error);
+    // 最后的降级处理
+    messageEl.innerHTML = `${timestampHtml} <span class="error-msg">消息显示错误</span>`;
     messagesDiv.appendChild(messageEl);
-
-    if (isAtBottom) {
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
+    if (isAtBottom) messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
+}
+
+// 辅助函数：HTML转义
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 window.api.onConnectionSuccess((username) => {
@@ -139,6 +192,7 @@ connectBtn.addEventListener('click', () => {
 sendBtn.addEventListener('click', () => {
   const message = mdEditor.content.trim();
   if (!message) return;
+  console.log(currentUsername);
   window.api.sendMessage(`${currentUsername}: ${message}`);
   mdEditor.content = ""; // 发送后清空编辑器
 });
@@ -177,6 +231,17 @@ reportbugsBtn.addEventListener('click', () => {
 
 closeReportBtn.addEventListener('click', () => {
   reportModal.classList.remove('active');
+});
+
+getNoticeBtn.addEventListener('click', () => {
+  noticeModal.classList.add('active');
+  window.api.getNotice().then((notice) => {
+    noticeContent.innerHTML = notice.map(item => `<li>${item}</li>`).join('');
+  });
+});
+
+closeNoticeBtn.addEventListener('click', () => {
+  noticeModal.classList.remove('active');
 });
 
 checkUpdateBtn.addEventListener('click', () => {
