@@ -36,6 +36,22 @@ const noticeContent = document.getElementById('notice-content');
 const messageInput = document.getElementById('message-input');
 const mdEditor = new MarkdownPalettes(messageInput);
 
+const fileBtn = document.getElementById('file-btn');
+const fileProgressContainer = document.getElementById('file-progress-container');
+const fileProgressText = document.getElementById('file-progress-text');
+const fileProgressBar = document.getElementById('file-progress-bar');
+
+// 文件传输相关变量
+let isSendingFile = false;
+let isReceivingFile = false;
+
+// 设置相关变量
+let bellEnabled = false;
+let notifierEnabled = false;
+let notifierKeywords = [];
+let fontFamily = 'Maple Mono NF CN Light';
+let fontSize = 14;
+
 let systemColor = '#87CEEB';
 let broadcastColor = '#90EE90';
 let hintColor = '#ADD8E6';
@@ -56,6 +72,11 @@ function getHHMMSS() {
 function displayMessage(msg, type = 'regular', username = null) {
   if (!msg || typeof msg !== 'string') return;
 
+  // 检查是否是Base64编码的文件数据
+  if ((isSendingFile || isReceivingFile) && msg.includes('base64')) {
+    return; // 不显示文件传输的Base64内容
+  }
+
   const messageEl = document.createElement('div');
   messageEl.className = `message-item ${type}`;
 
@@ -68,7 +89,7 @@ function displayMessage(msg, type = 'regular', username = null) {
   try {
     if (type === 'regular') {
       // 处理普通消息 - 解析发送者和内容
-      let sender = username || "匿名";
+      let sender = username || ""; // 不需要有“匿名”，否则服务器有人加入的提示无法正常工作
       let content = msg;
 
       // 如果消息包含标准格式 "用户名: 内容"
@@ -157,7 +178,50 @@ window.api.onConnectionError((errorMsg) => {
 });
 
 window.api.onReceiveMessage((message) => {
+  // 解析发送者和内容
+  let sender = "";
+  let content = message;
+
+  if (message.includes(': ')) {
+    const colonIndex = message.indexOf(': ');
+    sender = message.substring(0, colonIndex);
+    content = message.substring(colonIndex + 2);
+
+    // 检查是否是自己发送的消息
+    if (sender === currentUsername) {
+      displayMessage(message, 'regular');
+      return;
+    }
+  }
+
+  // 显示消息
   displayMessage(message, 'regular');
+
+  // 处理通知
+  if (notifierEnabled) {
+    // 如果设置了关键词，检查关键词匹配
+    if (notifierKeywords.length === 0 || notifierKeywords.some(keyword => content.toLowerCase().includes(keyword.toLowerCase()))) {
+      // 发送系统通知
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Touchfish', {
+          body: `${sender}: ${content}`,
+          icon: 'tchui.ico'
+        });
+      }
+    }
+  }
+
+  if (notifierKeywords.length === 0 || notifierKeywords.some(keyword => content.toLowerCase().includes(keyword.toLowerCase()))) {
+    // 播放提示音
+    if (bellEnabled) {
+      try {
+        const audio = new Audio('chimes.mp3');
+        audio.play().catch(console.error);
+      } catch (e) {
+        console.error('播放提示音失败:', e);
+      }
+    }
+  }
 });
 
 window.api.onReceiveHostHint((message) => {
@@ -247,7 +311,7 @@ closeNoticeBtn.addEventListener('click', () => {
 checkUpdateBtn.addEventListener('click', () => {
   checkUpdateModal.classList.add('active');
   window.api.checkForUpdates().then(({ latestRemakeVersion, currentVersion, hasUpdate }) => {
-    if (! hasUpdate) {
+    if (!hasUpdate) {
       checkUpdateContent.innerText = `发现新版本: ${latestRemakeVersion}\n当前版本: ${currentVersion}`;
     } else {
       checkUpdateContent.innerText = `当前已是最新版本: ${currentVersion}`;
@@ -276,6 +340,230 @@ function updateColor(type) {
     broadcastColor = colorInput.value;
   } else if (type === 'hint') {
     hintColor = colorInput.value;
+  }
+}
+
+if (fileBtn) {
+  fileBtn.addEventListener('click', async () => {
+    if (isSendingFile) {
+      alert('正在发送文件，请等待当前文件发送完成');
+      return;
+    }
+
+    try {
+      const filePath = await window.api.selectFile();
+      if (!filePath) return;
+
+      showFileProgress('发送文件中...');
+      isSendingFile = true;
+      displayMessage(`[系统提示] 开始发送文件...`, 'system');
+      
+      const success = await window.api.sendFile(filePath);
+      if (!success) {
+        displayMessage(`[系统提示] 文件发送失败`, 'system');
+        hideFileProgress();
+        isSendingFile = false;
+      }
+    } catch (error) {
+      console.error('文件发送错误:', error);
+      displayMessage(`[系统提示] 文件发送错误: ${error}`, 'system');
+      hideFileProgress();
+      isSendingFile = false;
+    }
+  });
+}
+
+// 文件发送相关事件处理
+window.api.onFileSendProgress((progress) => {
+  if (!isSendingFile) return;
+  updateFileProgress(`发送进度: ${progress.toFixed(1)}%`, progress);
+  displayMessage(`[系统提示] 文件发送进度: ${progress.toFixed(1)}%`, 'system');
+});
+
+window.api.onFileSendComplete(() => {
+  updateFileProgress('文件发送完成！', 100);
+  displayMessage('[系统提示] 文件发送完成！', 'system');
+  setTimeout(() => {
+    hideFileProgress();
+    isSendingFile = false;
+  }, 1000);
+});
+
+window.api.onFileSendError((error) => {
+  displayMessage(`[系统提示] 文件发送错误: ${error}`, 'system');
+  hideFileProgress();
+  isSendingFile = false;
+});
+
+// 文件接收相关事件处理
+window.api.onFileReceiveRequest((fileInfo) => {
+  // 检查是否是自己发送的文件
+  const fileName = fileInfo.name;
+  if (isReceivingFile || isSendingFile && fileInfo.sender === currentUsername) {
+    window.api.rejectFile();
+    return;
+  }
+
+  const shouldReceive = confirm(
+    `是否接收文件：${fileInfo.name}\n大小：${(fileInfo.size / 1024 / 1024).toFixed(1)}MB`
+  );
+
+  if (shouldReceive) {
+    showFileProgress('接收文件中...');
+    isReceivingFile = true;
+    displayMessage(`[系统提示] 开始接收文件：${fileInfo.name}`, 'system');
+  } else {
+    isReceivingFile = true;  // 临时设置为true以避免显示后续的Base64内容
+    window.api.rejectFile();
+    // 在接收到文件结束消息时会自动重置状态
+  }
+});
+
+window.api.onFileReceiveProgress((progress) => {
+  if (!isReceivingFile) return;
+  updateFileProgress(`接收进度: ${progress.toFixed(1)}%`, progress);
+  displayMessage(`[系统提示] 文件接收进度: ${progress.toFixed(1)}%`, 'system');
+});
+
+window.api.onFileReceiveComplete((fileData) => {
+  if (!isReceivingFile) return;
+  
+  updateFileProgress('文件接收完成！请选择保存位置...', 100);
+  displayMessage('[系统提示] 文件接收完成，请选择保存位置...', 'system');
+  
+  window.api.saveFile({
+    name: fileData.name,
+    data: fileData.data
+  }).then(result => {
+    if (result.success) {
+      displayMessage(`[系统提示] 文件已保存到：${result.filePath}`, 'system');
+      // 如果启用了系统通知，发送通知
+      if (notifierEnabled) {
+        new Notification('文件接收完成', {
+          body: `文件已保存到：${result.filePath}`,
+          icon: 'tchui.ico'
+        });
+      }
+    } else if (result.error) {
+      displayMessage(`[系统提示] 文件保存失败: ${result.error}`, 'system');
+    }
+    hideFileProgress();
+    isReceivingFile = false;
+  });
+});
+
+// 显示文件进度条
+function showFileProgress(text) {
+  fileProgressText.textContent = text;
+  fileProgressBar.style.width = '0%';
+  fileProgressContainer.classList.remove('hidden');
+  fileProgressContainer.classList.add('active');
+}
+
+// 更新文件进度条
+function updateFileProgress(text, percentage) {
+  fileProgressText.textContent = text;
+  fileProgressBar.style.width = `${percentage}%`;
+}
+
+// 隐藏文件进度条
+function hideFileProgress() {
+  fileProgressContainer.classList.remove('active');
+  fileProgressContainer.classList.add('hidden');
+}
+
+// 关闭设置按钮事件
+if (closeSettingsBtn) {
+  closeSettingsBtn.addEventListener('click', () => {
+    settingsModal.classList.remove('active');
+  });
+}
+
+// 加载设置
+function loadSettings() {
+  // 从localStorage加载设置
+  const settings = JSON.parse(localStorage.getItem('chatSettings') || '{}');
+  bellEnabled = settings.bellEnabled || false;
+  notifierEnabled = settings.notifierEnabled || false;
+  notifierKeywords = settings.notifierKeywords || [];
+  fontFamily = settings.fontFamily || 'Maple Mono NF CN Light';
+  fontSize = settings.fontSize || 14;
+
+  // 更新UI
+  document.getElementById('bell-enabled').checked = bellEnabled;
+  document.getElementById('notifier-enabled').checked = notifierEnabled;
+  document.getElementById('notifier-keywords').value = notifierKeywords.join(',');
+  document.getElementById('font-family').value = fontFamily;
+  document.getElementById('font-size').value = fontSize;
+}
+
+// 保存设置
+function saveSettings() {
+  bellEnabled = document.getElementById('bell-enabled').checked;
+  notifierEnabled = document.getElementById('notifier-enabled').checked;
+  notifierKeywords = document.getElementById('notifier-keywords').value.split(',').filter(k => k.trim());
+  fontFamily = document.getElementById('font-family').value;
+  fontSize = parseInt(document.getElementById('font-size').value) || 14;
+
+  // 如果启用了通知，请求通知权限
+  if (notifierEnabled && 'Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  // 保存到localStorage
+  const settings = {
+    bellEnabled,
+    notifierEnabled,
+    notifierKeywords,
+    fontFamily,
+    fontSize
+  };
+
+  localStorage.setItem('chatSettings', JSON.stringify(settings));
+
+  applySettings();
+
+  // 显示保存成功的模态框
+  const saveSuccessModal = document.createElement('div');
+  saveSuccessModal.className = 'modal active';
+  saveSuccessModal.innerHTML = `
+    <div class="modal-content" style="max-width: 300px;">
+      <h3 style="text-align: center; margin-bottom: 20px;">设置已保存</h3>
+      <p style="text-align: center; margin-bottom: 30px;">设置已成功保存并应用。</p>
+      <button class="main-btn" style="background-color: #4285F4; width: 100%; padding: 10px;">好的</button>
+    </div>
+  `;
+  document.body.appendChild(saveSuccessModal);
+
+  // 点击"好的"按钮关闭所有模态框
+  const okButton = saveSuccessModal.querySelector('button');
+  okButton.addEventListener('click', () => {
+    saveSuccessModal.remove();
+    settingsModal.classList.remove('active');
+  });
+}
+
+// 应用设置
+function applySettings() {
+  // 应用字体设置
+  document.body.style.fontFamily = fontFamily;
+  document.body.style.fontSize = `${fontSize}px`;
+  // 应用通知设置
+  if (notifierEnabled) {
+    window.api.onReceiveMessage((message) => {
+      const lowerMsg = message.toLowerCase();
+      if (notifierKeywords.some(keyword => lowerMsg.includes(keyword.toLowerCase()))) {
+        new Notification('消息通知', { body: message });
+      }
+      if (bellEnabled) {
+        try {
+          const audio = new Audio('notification.mp3');
+          audio.play();
+        } catch (e) {
+          console.error('播放通知声音失败:', e);
+        }
+      }
+    });
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "touchfish-ui-remake",
-  "version": "1.5.0-pre3",
+  "version": "2.0.0-pre",
   "description": "A beautiful, modern touchfish client built with Electron.",
   "main": "main.js",
   "type": "module",

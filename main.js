@@ -1,44 +1,38 @@
-//main.js
-/*
+// main.js
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import net from 'net';
+import axios from 'axios';
+import { shell } from 'electron';
+import fs from 'fs';
+import { promisify } from 'util';
+import hljs from 'highlight.js';
 import MarkdownIt from 'markdown-it';
 import * as markdownItEmoji from 'markdown-it-emoji';
-import net from 'net';
-import axios from 'axios';
-import { shell } from 'electron';
-import markdownItHighlightjs from 'markdown-it-highlightjs';
-import hljs from 'highlight.js';
-import katex from 'katex';
-*/
-import { app, BrowserWindow, ipcMain } from 'electron';
-import { fileURLToPath } from 'url';
-import path from 'path';
-import net from 'net';
-import axios from 'axios';
-import { shell } from 'electron';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 let md = null;
 let isInitializing = false;
 let initializationPromise = null;
 
-/*
-const md = new MarkdownIt({
-  html: true,
-  linkify: true,
-  typographer: true,
-}).use(markdownItEmoji.light)
-  .use(markdownItHighlightjs)
-  .use(require('markdown-it-katex'));
-*/
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const readFile = promisify(fs.readFile);
+const writeFile = promisify(fs.writeFile);
+
+// 文件传输常量
+const FILE_START = "[FILE_START]";
+const FILE_DATA = "[FILE_DATA]";
+const FILE_END = "[FILE_END]";
+const CHUNK_SIZE = 8192;
 
 let mainWindow;
 let clientSocket;
-let currentUsername = null; // 新增一个变量来保存当前用户名
+let currentUsername = null;
+let isReceivingFile = false;
+let currentFile = { name: "", data: [], size: 0, received: 0 };
+let isSendingFile = false;
 
 async function initializeMarkdown() {
   if (md) return md;
@@ -137,6 +131,39 @@ async function fetchNotice() {
   }
 }
 
+// 处理文件传输消息
+function handleFileMessage(msgData) {
+  if (msgData.type === FILE_START) {
+    isReceivingFile = true;
+    currentFile = {
+      name: msgData.name,
+      data: [],
+      size: msgData.size,
+      received: 0
+    };
+
+    // 询问用户是否接收文件
+    mainWindow.webContents.send('file-receive-request', {
+      name: msgData.name,
+      size: msgData.size
+    });
+
+  } else if (msgData.type === FILE_DATA && isReceivingFile) {
+    const chunkBuffer = Buffer.from(msgData.data, 'base64');
+    currentFile.data.push(chunkBuffer);
+    currentFile.received += chunkBuffer.length;
+
+    const progress = (currentFile.received / currentFile.size) * 100;
+    mainWindow.webContents.send('file-receive-progress', progress);
+
+  } else if (msgData.type === FILE_END && isReceivingFile) {
+    // 保存文件
+    mainWindow.webContents.send('file-receive-complete', currentFile);
+    isReceivingFile = false;
+    currentFile = { name: "", data: [], size: 0, received: 0 };
+  }
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 820,
@@ -176,7 +203,18 @@ function createWindow() {
       });
 
       clientSocket.on('data', (data) => {
-        const message = data.toString('utf-8').trim(); // 移除首尾空格
+        const message = data.toString('utf-8').trim();
+
+        if (message.startsWith('{') && message.endsWith('}')) {
+          try {
+            const msgData = JSON.parse(message);
+            handleFileMessage(msgData);
+            return;
+          } catch (e) {
+          }
+        }
+
+        // 处理普通消息
         if (message.startsWith('欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。请勿刷屏，刷屏者封禁 IP。')) {
           mainWindow.webContents.send('receive-host-hint', message);
         } else if (message.startsWith('[系统提示]')) {
@@ -200,6 +238,126 @@ function createWindow() {
 
     } catch (e) {
       mainWindow.webContents.send('connection-error', `无法连接到服务器:\n${e.message}`);
+    }
+
+    ipcMain.handle('send-file', async (event, filePath) => {
+      if (!clientSocket || !filePath) return false;
+
+      try {
+        const fileName = path.basename(filePath);
+        const fileSize = fs.statSync(filePath).size;
+        isSendingFile = true;
+
+        // 发送文件开始标记
+        const startInfo = {
+          type: FILE_START,
+          name: fileName,
+          size: fileSize
+        };
+
+        clientSocket.write(JSON.stringify(startInfo) + '\n');
+
+        // 读取并发送文件内容
+        const fileBuffer = await readFile(filePath);
+        let sent = 0;
+
+        while (sent < fileBuffer.length) {
+          const chunk = fileBuffer.slice(sent, sent + CHUNK_SIZE);
+          const chunkBase64 = chunk.toString('base64');
+
+          const dataInfo = {
+            type: FILE_DATA,
+            data: chunkBase64
+          };
+
+          // 确保每条消息后面都有换行符
+          clientSocket.write(JSON.stringify(dataInfo) + '\n');
+          
+          sent += chunk.length;
+
+          // 发送进度更新
+          const progress = (sent / fileBuffer.length) * 100;
+          mainWindow.webContents.send('file-send-progress', progress);
+
+          // 添加小延迟以防止发送过快
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+
+        // 发送文件结束标记
+        const endInfo = {
+          type: FILE_END
+        };
+
+        clientSocket.write(JSON.stringify(endInfo) + '\n');
+        mainWindow.webContents.send('file-send-complete');
+
+        isSendingFile = false;
+        return true;
+      } catch (error) {
+        console.error('文件发送失败:', error);
+        mainWindow.webContents.send('file-send-error', error.message);
+        isSendingFile = false;
+        return false;
+      }
+    });
+
+    // 处理文件保存请求
+    ipcMain.handle('save-file', async (event, fileData) => {
+      try {
+        const { name, data } = fileData;
+        const result = await dialog.showSaveDialog(mainWindow, {
+          defaultPath: name
+        });
+
+        if (!result.canceled && result.filePath) {
+          // 将数组中的所有 Buffer 合并成一个
+          const fileBuffer = Buffer.concat(data.map(chunk => Buffer.from(chunk)));
+          await writeFile(result.filePath, fileBuffer);
+          return { success: true, filePath: result.filePath };
+        }
+        return { success: false };
+      } catch (error) {
+        console.error('文件保存失败:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    // 处理文件接收拒绝
+    ipcMain.on('reject-file', () => {
+      isReceivingFile = false;
+      currentFile = { name: "", data: [], size: 0, received: 0 };
+    });
+  });
+
+  ipcMain.handle('select-file', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile']
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle('get-settings', async () => {
+    const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+    if (fs.existsSync(settingsPath)) {
+      const settings = JSON.parse(fs.readFileSync(settingsPath));
+      return settings;
+    }
+    return {};
+  });
+
+  ipcMain.handle('save-settings', async (_event, settings) => {
+    const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+    await writeFile(settingsPath, JSON.stringify(settings, null, 2));
+    return true;
+  });
+
+  ipcMain.on('send-heartbeat', () => {
+    if (clientSocket) {
+      clientSocket.write('ping\n');
     }
   });
 

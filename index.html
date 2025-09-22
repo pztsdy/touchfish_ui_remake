@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="dist/markdown-palettes.css">
   <link rel="stylesheet" href="node_modules/katex/dist/katex.css">
   <link rel="stylesheet" href="node_modules/highlight.js/styles/github.css">
+  <script src="dist/markdown-palettes.js"></script>
 </head>
 
 <body>
@@ -49,8 +50,12 @@
         <div id="md-editor-container" class="md-editor-container" style="min-height: 220px;">
           <div style="height: auto;" id="message-input" class="md-input" contenteditable="true" placeholder="输入消息..."></div>
         </div>
-        <script src="dist/markdown-palettes.js"></script>
-        <button id="send-btn" class="main-btn">发送</button>
+      
+        <!-- 文件发送按钮放在发送按钮上方 -->
+        <div class="chat-actions">
+          <button id="file-btn" class="main-btn">发送文件</button>
+          <button id="send-btn" class="main-btn">发送</button>
+        </div>
       </div>
     </div>
 
@@ -93,22 +98,61 @@ v1.0.0:
       </div>
     </div>
 
+    <!-- 文件传输进度条 -->
+    <div id="file-progress-container" class="file-progress-container hidden">
+      <div class="file-progress-bar-container">
+        <div id="file-progress-text" class="file-progress-text">文件传输中...</div>
+        <div class="file-progress-bar-outer">
+          <div id="file-progress-bar" class="file-progress-bar" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 文件传输模态框 -->
+    <div id="file-modal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-btn" id="close-file-modal-btn">&times;</span>
+        <h2>文件传输</h2>
+        <div id="file-transfer-content"></div>
+      </div>
+    </div>
+
     <div id="settings-modal" class="modal hidden">
       <div class="modal-content">
         <span class="close-btn" id="close-settings-btn">&times;</span>
-        <h2>颜色设置</h2>
-        <div class="color-setting">
-          <label for="system-color">系统提示颜色:</label>
-          <input type="color" id="system-color" value="#87CEEB">
+        <h2>设置</h2>
+    
+        <div class="setting-group">
+          <h3>通知设置</h3>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="bell-enabled"> 启用消息提示音
+            </label>
+          </div>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="notifier-enabled"> 启用系统通知
+            </label>
+          </div>
+          <div class="setting-item">
+            <label for="notifier-keywords">通知关键词（逗号分隔）:</label>
+            <input type="text" id="notifier-keywords" placeholder="关键词1,关键词2">
+          </div>
         </div>
-        <div class="color-setting">
-          <label for="broadcast-color">房主广播颜色:</label>
-          <input type="color" id="broadcast-color" value="#90EE90">
+    
+        <div class="setting-group">
+          <h3>字体设置</h3>
+          <div class="setting-item">
+            <label for="font-family">字体名称:</label>
+            <input type="text" id="font-family" value="Maple Mono NF CN Light">
+          </div>
+          <div class="setting-item">
+            <label for="font-size">字体大小:</label>
+            <input type="number" id="font-size" value="14" min="10" max="30">
+          </div>
         </div>
-        <div class="color-setting">
-          <label for="hint-color">房主提示颜色:</label>
-          <input type="color" id="hint-color" value="#ADD8E6">
-        </div>
+    
+        <button class="main-btn" onclick="saveSettings()">保存设置</button>
       </div>
     </div>
 
