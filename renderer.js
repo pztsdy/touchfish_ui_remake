@@ -50,7 +50,7 @@ let bellEnabled = false;
 let notifierEnabled = false;
 let notifierKeywords = [];
 let fontFamily = 'Maple Mono NF CN Light';
-let fontSize = 14;
+let fontSize = 16;
 
 let systemColor = '#87CEEB';
 let broadcastColor = '#90EE90';
@@ -73,8 +73,23 @@ function displayMessage(msg, type = 'regular', username = null) {
   if (!msg || typeof msg !== 'string') return;
 
   // 检查是否是Base64编码的文件数据
-  if ((isSendingFile || isReceivingFile) && msg.includes('base64')) {
-    return; // 不显示文件传输的Base64内容
+  if ((isSendingFile || isReceivingFile) && (
+    msg.includes('[FILE_START]') || 
+    msg.includes('[FILE_DATA]') || 
+    msg.includes('[FILE_END]') ||
+    msg.includes('base64')
+  )) {
+    return; // 不显示文件传输相关内容
+  }
+
+  // 新增逻辑：检查是否是文件传输相关的消息
+  try {
+    const parsedMsg = JSON.parse(msg);
+    if (parsedMsg.type === 'FILE_START' || parsedMsg.type === 'FILE_DATA' || parsedMsg.type === 'FILE_END') {
+      return; // 不显示文件传输相关内容
+    }
+  } catch (e) {
+    // 如果解析失败，说明不是JSON格式，继续处理
   }
 
   const messageEl = document.createElement('div');
@@ -198,27 +213,28 @@ window.api.onReceiveMessage((message) => {
   displayMessage(message, 'regular');
 
   // 处理通知
-  if (notifierEnabled) {
-    // 如果设置了关键词，检查关键词匹配
-    if (notifierKeywords.length === 0 || notifierKeywords.some(keyword => content.toLowerCase().includes(keyword.toLowerCase()))) {
+  if (notifierEnabled || bellEnabled) {
+    const hasKeywords = notifierKeywords.length === 0 || 
+                       notifierKeywords.some(keyword => content.toLowerCase().includes(keyword.toLowerCase()));
+    
+    if (hasKeywords) {
       // 发送系统通知
-      if ('Notification' in window && Notification.permission === 'granted') {
+      if (notifierEnabled && 'Notification' in window && Notification.permission === 'granted') {
         new Notification('Touchfish', {
           body: `${sender}: ${content}`,
-          icon: 'tchui.ico'
+          icon: 'tchui.ico',
+          tag: 'message' // 使用tag避免重复通知
         });
       }
-    }
-  }
 
-  if (notifierKeywords.length === 0 || notifierKeywords.some(keyword => content.toLowerCase().includes(keyword.toLowerCase()))) {
-    // 播放提示音
-    if (bellEnabled) {
-      try {
-        const audio = new Audio('chimes.mp3');
-        audio.play().catch(console.error);
-      } catch (e) {
-        console.error('播放提示音失败:', e);
+      // 播放提示音
+      if (bellEnabled) {
+        try {
+          const audio = new Audio('chimes.mp3');
+          audio.play().catch(console.error);
+        } catch (e) {
+          console.error('播放提示音失败:', e);
+        }
       }
     }
   }
@@ -354,9 +370,9 @@ if (fileBtn) {
       const filePath = await window.api.selectFile();
       if (!filePath) return;
 
-      showFileProgress('发送文件中...');
+      // 立即标记为正在发送，防止自收自发
       isSendingFile = true;
-      displayMessage(`[系统提示] 开始发送文件...`, 'system');
+      showFileProgress('准备发送文件...');
       
       const success = await window.api.sendFile(filePath);
       if (!success) {
@@ -377,7 +393,7 @@ if (fileBtn) {
 window.api.onFileSendProgress((progress) => {
   if (!isSendingFile) return;
   updateFileProgress(`发送进度: ${progress.toFixed(1)}%`, progress);
-  displayMessage(`[系统提示] 文件发送进度: ${progress.toFixed(1)}%`, 'system');
+  // displayMessage(`[系统提示] 文件发送进度: ${progress.toFixed(1)}%`, 'system'); 有进度条了都不需要这个提示了
 });
 
 window.api.onFileSendComplete(() => {
@@ -396,26 +412,45 @@ window.api.onFileSendError((error) => {
 });
 
 // 文件接收相关事件处理
+let lastFileReceiveTime = 0;
 window.api.onFileReceiveRequest((fileInfo) => {
-  // 检查是否是自己发送的文件
-  const fileName = fileInfo.name;
-  if (isReceivingFile || isSendingFile && fileInfo.sender === currentUsername) {
+  // 防止重复接收请求
+  const now = Date.now();
+  if (now - lastFileReceiveTime < 1000) {
+    window.api.rejectFile();
+    return;
+  }
+  lastFileReceiveTime = now;
+
+  // 如果正在发送或接收其他文件，拒绝新的文件
+  if (isSendingFile || isReceivingFile) {
     window.api.rejectFile();
     return;
   }
 
+  // 检查是否是自己发送的文件
+  if (fileInfo.sender === currentUsername) {
+    window.api.rejectFile();
+    return;
+  }
+
+  const size = fileInfo.size;
+  const sizeStr = size > 1024 * 1024 
+    ? `${(size / 1024 / 1024).toFixed(2)}MB` 
+    : `${(size / 1024).toFixed(2)}KB`;
+
   const shouldReceive = confirm(
-    `是否接收文件：${fileInfo.name}\n大小：${(fileInfo.size / 1024 / 1024).toFixed(1)}MB`
+    `是否接收文件：${fileInfo.name}（来自：${fileInfo.sender}）\n大小：${sizeStr}`
   );
 
   if (shouldReceive) {
     showFileProgress('接收文件中...');
     isReceivingFile = true;
-    displayMessage(`[系统提示] 开始接收文件：${fileInfo.name}`, 'system');
+    displayMessage(`[系统提示] 开始接收来自 ${fileInfo.sender} 的文件：${fileInfo.name}（${sizeStr}）`, 'system');
   } else {
-    isReceivingFile = true;  // 临时设置为true以避免显示后续的Base64内容
+    // 拒绝文件，不需要设置isReceivingFile
     window.api.rejectFile();
-    // 在接收到文件结束消息时会自动重置状态
+    displayMessage(`[系统提示] 已拒绝接收来自 ${fileInfo.sender} 的文件：${fileInfo.name}`, 'system');
   }
 });
 
@@ -479,93 +514,7 @@ if (closeSettingsBtn) {
   });
 }
 
-// 加载设置
-function loadSettings() {
-  // 从localStorage加载设置
-  const settings = JSON.parse(localStorage.getItem('chatSettings') || '{}');
-  bellEnabled = settings.bellEnabled || false;
-  notifierEnabled = settings.notifierEnabled || false;
-  notifierKeywords = settings.notifierKeywords || [];
-  fontFamily = settings.fontFamily || 'Maple Mono NF CN Light';
-  fontSize = settings.fontSize || 14;
 
-  // 更新UI
-  document.getElementById('bell-enabled').checked = bellEnabled;
-  document.getElementById('notifier-enabled').checked = notifierEnabled;
-  document.getElementById('notifier-keywords').value = notifierKeywords.join(',');
-  document.getElementById('font-family').value = fontFamily;
-  document.getElementById('font-size').value = fontSize;
-}
-
-// 保存设置
-function saveSettings() {
-  bellEnabled = document.getElementById('bell-enabled').checked;
-  notifierEnabled = document.getElementById('notifier-enabled').checked;
-  notifierKeywords = document.getElementById('notifier-keywords').value.split(',').filter(k => k.trim());
-  fontFamily = document.getElementById('font-family').value;
-  fontSize = parseInt(document.getElementById('font-size').value) || 14;
-
-  // 如果启用了通知，请求通知权限
-  if (notifierEnabled && 'Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
-
-  // 保存到localStorage
-  const settings = {
-    bellEnabled,
-    notifierEnabled,
-    notifierKeywords,
-    fontFamily,
-    fontSize
-  };
-
-  localStorage.setItem('chatSettings', JSON.stringify(settings));
-
-  applySettings();
-
-  // 显示保存成功的模态框
-  const saveSuccessModal = document.createElement('div');
-  saveSuccessModal.className = 'modal active';
-  saveSuccessModal.innerHTML = `
-    <div class="modal-content" style="max-width: 300px;">
-      <h3 style="text-align: center; margin-bottom: 20px;">设置已保存</h3>
-      <p style="text-align: center; margin-bottom: 30px;">设置已成功保存并应用。</p>
-      <button class="main-btn" style="background-color: #4285F4; width: 100%; padding: 10px;">好的</button>
-    </div>
-  `;
-  document.body.appendChild(saveSuccessModal);
-
-  // 点击"好的"按钮关闭所有模态框
-  const okButton = saveSuccessModal.querySelector('button');
-  okButton.addEventListener('click', () => {
-    saveSuccessModal.remove();
-    settingsModal.classList.remove('active');
-  });
-}
-
-// 应用设置
-function applySettings() {
-  // 应用字体设置
-  document.body.style.fontFamily = fontFamily;
-  document.body.style.fontSize = `${fontSize}px`;
-  // 应用通知设置
-  if (notifierEnabled) {
-    window.api.onReceiveMessage((message) => {
-      const lowerMsg = message.toLowerCase();
-      if (notifierKeywords.some(keyword => lowerMsg.includes(keyword.toLowerCase()))) {
-        new Notification('消息通知', { body: message });
-      }
-      if (bellEnabled) {
-        try {
-          const audio = new Audio('notification.mp3');
-          audio.play();
-        } catch (e) {
-          console.error('播放通知声音失败:', e);
-        }
-      }
-    });
-  }
-}
 
 document.getElementById('system-color').addEventListener('input', () => updateColor('system'));
 document.getElementById('broadcast-color').addEventListener('input', () => updateColor('broadcast'));

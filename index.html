@@ -152,9 +152,90 @@ v1.0.0:
           </div>
         </div>
     
-        <button class="main-btn" onclick="saveSettings()">保存设置</button>
+        <button class="main-btn" id="save-settings-btn">保存设置</button>
       </div>
     </div>
+
+    <script>
+      // 设置相关函数
+      function loadSettings() {
+        const savedSettings = localStorage.getItem('chatSettings');
+        if (!savedSettings) return;
+
+        const settings = JSON.parse(savedSettings);
+        bellEnabled = settings.bellEnabled || false;
+        notifierEnabled = settings.notifierEnabled || false;
+        notifierKeywords = settings.notifierKeywords || [];
+        fontFamily = settings.fontFamily || 'Maple Mono NF CN Light';
+        fontSize = settings.fontSize || 16;
+
+        // 更新UI
+        document.getElementById('bell-enabled').checked = bellEnabled;
+        document.getElementById('notifier-enabled').checked = notifierEnabled;
+        document.getElementById('notifier-keywords').value = notifierKeywords.join(',');
+        document.getElementById('font-family').value = fontFamily;
+        document.getElementById('font-size').value = fontSize;
+      }
+
+      function applySettings() {
+        // 应用字体设置
+        messagesDiv.style.fontFamily = fontFamily;
+        messagesDiv.style.fontSize = `${fontSize}px`;
+        messageInput.style.fontFamily = fontFamily;
+        messageInput.style.fontSize = `${fontSize}px`;
+
+        // 如果启用了通知，请求通知权限
+        if (notifierEnabled && 'Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+
+        // 保存到localStorage
+        const settings = {
+          bellEnabled,
+          notifierEnabled,
+          notifierKeywords,
+          fontFamily,
+          fontSize
+        };
+
+        localStorage.setItem('chatSettings', JSON.stringify(settings));
+      }
+
+      // 将保存设置按钮事件处理程序添加到window.onload
+      window.addEventListener('load', () => {
+        document.getElementById('save-settings-btn').addEventListener('click', () => {
+          bellEnabled = document.getElementById('bell-enabled').checked;
+          notifierEnabled = document.getElementById('notifier-enabled').checked;
+          notifierKeywords = document.getElementById('notifier-keywords').value.split(',').filter(k => k.trim());
+          fontFamily = document.getElementById('font-family').value;
+          fontSize = parseInt(document.getElementById('font-size').value) || 16;
+
+          window.api.saveSettings({
+            bellEnabled,
+            notifierEnabled,
+            notifierKeywords,
+            fontFamily,
+            fontSize
+          }).then(() => {
+            applySettings();
+
+            // 显示保存成功提示
+            const toast = document.createElement('div');
+            toast.className = 'save-success-toast';
+            toast.textContent = '设置已保存';
+            document.body.appendChild(toast);
+
+            // 2秒后移除提示
+            setTimeout(() => {
+              toast.remove();
+            }, 2000);
+          });
+        });
+
+        // 加载保存的设置
+        loadSettings();
+      });
+    </script>
 
     <div id="report-modal" class="modal hidden">
       <div class="modal-content">

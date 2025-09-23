@@ -202,27 +202,37 @@ function createWindow() {
         mainWindow.webContents.send('connection-success', username);
       });
 
+      let buffer = '';
+
       clientSocket.on('data', (data) => {
-        const message = data.toString('utf-8').trim();
+        buffer += data.toString('utf-8');
 
-        if (message.startsWith('{') && message.endsWith('}')) {
-          try {
-            const msgData = JSON.parse(message);
-            handleFileMessage(msgData);
-            return;
-          } catch (e) {
+        let boundary = buffer.indexOf('\n');
+        while (boundary !== -1) {
+          const message = buffer.substring(0, boundary).trim();
+          buffer = buffer.substring(boundary + 1);
+          boundary = buffer.indexOf('\n');
+
+          if (message.startsWith('{') && message.endsWith('}')) {
+            try {
+              const msgData = JSON.parse(message);
+              handleFileMessage(msgData);
+              continue;
+            } catch (e) {
+              console.error('JSON解析失败:', e);
+            }
           }
-        }
 
-        // 处理普通消息
-        if (message.startsWith('欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。请勿刷屏，刷屏者封禁 IP。')) {
-          mainWindow.webContents.send('receive-host-hint', message);
-        } else if (message.startsWith('[系统提示]')) {
-          mainWindow.webContents.send('receive-system-message', message.substring('[系统提示]'.length).trim());
-        } else if (message.startsWith('[房主广播]')) {
-          mainWindow.webContents.send('receive-broadcast-message', message.substring('[房主广播]'.length).trim());
-        } else {
-          mainWindow.webContents.send('receive-message', message);
+          // 处理普通消息
+          if (message.startsWith('欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。请勿刷屏，刷屏者封禁 IP。')) {
+            mainWindow.webContents.send('receive-host-hint', message);
+          } else if (message.startsWith('[系统提示]')) {
+            mainWindow.webContents.send('receive-system-message', message.substring('[系统提示]'.length).trim());
+          } else if (message.startsWith('[房主广播]')) {
+            mainWindow.webContents.send('receive-broadcast-message', message.substring('[房主广播]'.length).trim());
+          } else {
+            mainWindow.webContents.send('receive-message', message);
+          }
         }
       });
 
