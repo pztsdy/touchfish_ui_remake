@@ -457,7 +457,7 @@ window.api.onFileReceiveRequest((fileInfo) => {
 window.api.onFileReceiveProgress((progress) => {
   if (!isReceivingFile) return;
   updateFileProgress(`接收进度: ${progress.toFixed(1)}%`, progress);
-  displayMessage(`[系统提示] 文件接收进度: ${progress.toFixed(1)}%`, 'system');
+  // displayMessage(`[系统提示] 文件接收进度: ${progress.toFixed(1)}%`, 'system');  有进度条了都不需要这个提示了
 });
 
 window.api.onFileReceiveComplete((fileData) => {
