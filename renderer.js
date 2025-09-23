@@ -142,7 +142,7 @@ function displayMessage(msg, type = 'regular', username = null) {
       const prefixMap = {
         'system': '[系统提示]',
         'broadcast': '[房主广播]',
-        'hint': '欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。请勿刷屏，刷屏者封禁 IP。'
+        'hint': '欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。'
       };
 
       const color = colorMap[type] || '#333333';
@@ -253,7 +253,7 @@ window.api.onReceiveBroadcastMessage((message) => {
 });
 
 window.api.getVersions().then(({ newestVersion, currentVersion, canServeVersion }) => {
-  versionInfo.innerText = `本程序版本: ${currentVersion}\n适配的官方服务器（保证稳定性）版本: v1.1.1 (防断连版本)\n官方 Python Client 最新版本: ${newestVersion}`;
+  versionInfo.innerText = `本程序版本: ${currentVersion}\n适配的官方服务器（保证稳定性）版本: v2.0.0\n官方 Python Client 最新版本: ${newestVersion}`;
 });
 
 connectBtn.addEventListener('click', () => {
