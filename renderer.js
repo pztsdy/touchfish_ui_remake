@@ -70,19 +70,8 @@ function getHHMMSS() {
 }
 
 function displayMessage(msg, type = 'regular', username = null) {
-  if (!msg || typeof msg !== 'string') return;
+  // if (!msg || typeof msg !== 'string') return;
 
-  // 检查是否是Base64编码的文件数据
-  if ((isSendingFile || isReceivingFile) && (
-    msg.includes('[FILE_START]') || 
-    msg.includes('[FILE_DATA]') || 
-    msg.includes('[FILE_END]') ||
-    msg.includes('base64')
-  )) {
-    return; // 不显示文件传输相关内容
-  }
-
-  // 新增逻辑：检查是否是文件传输相关的消息
   try {
     const parsedMsg = JSON.parse(msg);
     if (parsedMsg.type === 'FILE_START' || parsedMsg.type === 'FILE_DATA' || parsedMsg.type === 'FILE_END') {
@@ -90,6 +79,7 @@ function displayMessage(msg, type = 'regular', username = null) {
     }
   } catch (e) {
     // 如果解析失败，说明不是JSON格式，继续处理
+    console.log("非JSON消息，继续处理");
   }
 
   const messageEl = document.createElement('div');
@@ -101,6 +91,7 @@ function displayMessage(msg, type = 'regular', username = null) {
 
   const isAtBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 5;
 
+  console.log("处理普通消息");
   try {
     if (type === 'regular') {
       // 处理普通消息 - 解析发送者和内容
@@ -122,6 +113,8 @@ function displayMessage(msg, type = 'regular', username = null) {
       window.api.markdownit(content).then(rendered => {
         messageEl.innerHTML = `${timestampHtml} <strong class="sender">${sender}:</strong> <span class="msg-text">${rendered}</span>`;
         messagesDiv.appendChild(messageEl);
+        console.log("渲染...");
+        console.log(msg);
         if (isAtBottom) messagesDiv.scrollTop = messagesDiv.scrollHeight;
       }).catch(error => {
         // Markdown渲染失败时的降级处理
@@ -272,7 +265,7 @@ connectBtn.addEventListener('click', () => {
 sendBtn.addEventListener('click', () => {
   const message = mdEditor.content.trim();
   if (!message) return;
-  console.log(currentUsername);
+  // console.log(currentUsername);
   window.api.sendMessage(`${currentUsername}: ${message}`);
   mdEditor.content = ""; // 发送后清空编辑器
 });

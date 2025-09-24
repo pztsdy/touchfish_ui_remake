@@ -205,6 +205,7 @@ function createWindow() {
       let buffer = '';
 
       clientSocket.on('data', (data) => {
+        console.log("Message!");
         buffer += data.toString('utf-8');
 
         let boundary = buffer.indexOf('\n');
@@ -224,7 +225,7 @@ function createWindow() {
           }
 
           // 处理普通消息
-          if (message.startsWith('欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。请勿刷屏，刷屏者封禁 IP。')) {
+          if (message.startsWith('欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。')) {
             mainWindow.webContents.send('receive-host-hint', message);
           } else if (message.startsWith('[系统提示]')) {
             mainWindow.webContents.send('receive-system-message', message.substring('[系统提示]'.length).trim());
@@ -365,15 +366,18 @@ function createWindow() {
     return true;
   });
 
+  /*
   ipcMain.on('send-heartbeat', () => {
     if (clientSocket) {
       clientSocket.write('ping\n');
     }
   });
+  */
 
   ipcMain.on('send-message', (event, message) => {
     if (clientSocket) {
-      clientSocket.write(message); // 发送给服务器
+      console.log("Sended.")
+      clientSocket.write(message + '\n'); // 发送给服务器
     }
   });
 
@@ -390,6 +394,7 @@ function createWindow() {
   });
 
   ipcMain.handle('markdownit', async (_event, text) => {
+    console.log("Markdown.");
     if (!md) {
       await initializeMarkdown();
     }
