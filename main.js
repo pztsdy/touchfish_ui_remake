@@ -11,9 +11,86 @@ import hljs from 'highlight.js';
 import MarkdownIt from 'markdown-it';
 import * as markdownItEmoji from 'markdown-it-emoji';
 
+// 导入插件系统模块
+import PluginManager from './src/plugins/core/PluginManager.mjs';
+import PluginAPI from './src/plugins/core/PluginAPI.mjs';
+
 let md = null;
 let isInitializing = false;
 let initializationPromise = null;
+let pluginManager = null;
+let pluginAPI = null;
+
+// 初始化插件系统
+async function initializePluginSystem() {
+  if (!pluginManager) {
+    pluginManager = new PluginManager();
+    pluginAPI = new PluginAPI(pluginManager);
+    await pluginManager.init();
+    
+    // 设置插件系统的IPC处理
+    ipcMain.handle('plugin:install', async (event, pluginPath) => {
+      try {
+        await pluginManager.installPlugin(pluginPath);
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('plugin:uninstall', async (event, pluginId) => {
+      try {
+        await pluginManager.uninstallPlugin(pluginId);
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('plugin:enable', async (event, pluginId) => {
+      try {
+        await pluginManager.enablePlugin(pluginId);
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('plugin:disable', async (event, pluginId) => {
+      try {
+        await pluginManager.disablePlugin(pluginId);
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('plugin:getList', async () => {
+      try {
+        const plugins = await pluginManager.getPluginList();
+        return plugins;
+      } catch (error) {
+        return [];
+      }
+    });
+
+    ipcMain.handle('plugin:getThemes', async () => {
+      try {
+        return await pluginManager.getThemePlugins();
+      } catch (error) {
+        return [];
+      }
+    });
+
+    ipcMain.handle('plugin:getFunctions', async () => {
+      try {
+        return await pluginManager.getFunctionPlugins();
+      } catch (error) {
+        return [];
+      }
+    });
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -179,6 +256,16 @@ function createWindow() {
     title: 'Touchfish UI Remake',
     icon: 'tchui.ico',
   });
+
+  // 初始化插件系统
+  initializePluginSystem()
+    .then(() => {
+      pluginAPI = new PluginAPI(mainWindow, pluginManager);
+      return pluginManager.loadAllPlugins();
+    })
+    .catch(error => {
+      console.error('插件系统初始化失败:', error);
+    });
 
   mainWindow.loadFile('index.html');
 
@@ -351,6 +438,27 @@ function createWindow() {
     return result.filePaths[0];
   });
 
+  // 专门用于选择插件包的处理程序
+  ipcMain.handle('select-plugin-directory', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory'],
+      title: '选择插件包文件夹',
+      buttonLabel: '选择文件夹'
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+
+    // 检查是否包含plugin.json
+    const pluginJsonPath = path.join(result.filePaths[0], 'plugin.json');
+    try {
+      await fs.promises.access(pluginJsonPath, fs.constants.F_OK);
+      return result.filePaths[0];
+    } catch (error) {
+      throw new Error('所选文件夹不是有效的插件包：未找到plugin.json文件');
+    }
+  });
+
   ipcMain.handle('get-settings', async () => {
     const settingsPath = path.join(app.getPath('userData'), 'settings.json');
     if (fs.existsSync(settingsPath)) {
@@ -419,9 +527,22 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  // 创建窗口
+  createWindow();
 
-app.on('window-all-closed', () => {
+  // 初始化插件系统
+  await initializePluginSystem().catch(error => {
+    console.error('插件系统初始化失败:', error);
+  });
+});
+
+app.on('window-all-closed', async () => {
+  // 保存插件状态
+  if (pluginManager) {
+    await pluginManager.savePluginStates();
+  }
+  
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -430,5 +551,16 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
+  }
+});
+
+// 应用退出前保存插件状态
+let isQuitting = false;
+app.on('before-quit', async () => {
+  if (!isQuitting) {
+    isQuitting = true;
+    if (pluginManager) {
+      await pluginManager.savePluginStates();
+    }
   }
 });

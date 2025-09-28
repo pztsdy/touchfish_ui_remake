@@ -1,0 +1,13 @@
+{
+  "id": "emoji-picker",
+  "name": "表情选择器",
+  "version": "1.0.0",
+  "author": "示例插件",
+  "desc": "一个简单的表情选择器插件示例",
+  "type": "pack",
+  "minAppVersion": "1.0.0",
+  "permissions": ["ui:menu", "chat:send"],
+  "main": "script.js",
+  "style": "style.css",
+  "screenshots": []
+}

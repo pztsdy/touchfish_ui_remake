@@ -47,6 +47,30 @@ contextBridge.exposeInMainWorld('api', {
   openLink: (url) => ipcRenderer.send('open-link', url),
   markdownit: (text) => ipcRenderer.invoke('markdownit', text),
 
+  // 插件系统API
+  plugins: {
+    // 插件管理
+    selectPluginDirectory: () => ipcRenderer.invoke('select-plugin-directory'),
+    install: (pluginPath) => ipcRenderer.invoke('plugin:install', pluginPath),
+    uninstall: (pluginId) => ipcRenderer.invoke('plugin:uninstall', pluginId),
+    enable: (pluginId) => ipcRenderer.invoke('plugin:enable', pluginId),
+    disable: (pluginId) => ipcRenderer.invoke('plugin:disable', pluginId),
+    getList: () => ipcRenderer.invoke('plugin:getList'),
+    getThemes: () => ipcRenderer.invoke('plugin:getThemes'),
+    getFunctions: () => ipcRenderer.invoke('plugin:getFunctions'),
+    
+    // 插件事件
+    onPluginRegistered: (callback) => ipcRenderer.on('plugin:registered', (event, plugin) => callback(plugin)),
+    onPluginEnabled: (callback) => ipcRenderer.on('plugin:enabled', (event, plugin) => callback(plugin)),
+    onPluginDisabled: (callback) => ipcRenderer.on('plugin:disabled', (event, plugin) => callback(plugin)),
+    onPluginUninstalled: (callback) => ipcRenderer.on('plugin:uninstalled', (event, pluginId) => callback(pluginId)),
+    
+    // 插件通信
+    sendToPlugin: (pluginId, channel, data) => ipcRenderer.send(`plugin:${pluginId}:${channel}`, data),
+    onPluginMessage: (pluginId, channel, callback) => 
+      ipcRenderer.on(`plugin:${pluginId}:${channel}`, (event, data) => callback(data))
+  },
+  
   // 文件传输相关API
   selectFile: () => ipcRenderer.invoke('select-file'),
   sendFile: (filePath) => ipcRenderer.invoke('send-file', filePath),

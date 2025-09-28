@@ -1,7 +1,13 @@
 // renderer.js
-const connectionPage = document.getElementById('connection-page');
-const chatPage = document.getElementById('chat-page');
-const connectBtn = document.getElementById('connect-btn');
+// 避免变量重复声明
+let connectionPage, chatPage, connectBtn;
+
+// DOM加载完成后初始化
+document.addEventListener('DOMContentLoaded', () => {
+  // 初始化DOM元素引用
+  connectionPage = document.getElementById('connection-page');
+  chatPage = document.getElementById('chat-page');
+  connectBtn = document.getElementById('connect-btn');
 const sendBtn = document.getElementById('send-btn');
 const ipInput = document.getElementById('ip');
 const portInput = document.getElementById('port');

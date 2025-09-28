@@ -10,7 +10,10 @@
   <link rel="stylesheet" href="dist/markdown-palettes.css">
   <link rel="stylesheet" href="node_modules/katex/dist/katex.css">
   <link rel="stylesheet" href="node_modules/highlight.js/styles/github.css">
+  <link rel="stylesheet" href="src/plugins/core/pluginManager.css">
   <script src="dist/markdown-palettes.js"></script>
+  <script type="module" src="src/plugins/core/pluginManagerUI.js"></script>
+  <script src="renderer.js" defer></script>
 </head>
 
 <body>
@@ -43,6 +46,7 @@
         <button id="check-update" class="icon-btn">🔄</button>
         <button id="report-bug" class="icon-btn">🧐</button>
         <button id="update-log-btn" class="icon-btn">📝</button>
+        <button id="plugins-btn" class="icon-btn">🧩</button>
         <button id="settings-btn" class="icon-btn">⚙️</button>
       </div>
       <div id="messages" class="messages markdown-body" style="min-height: 300px; max-height: 300px; overflow-y: auto;"></div>
@@ -283,6 +287,7 @@ v2.0.0
         <ul id="notice-content" class="notice-content"></ul>
       </div>
     </div>
+  <script src="src/plugins/core/pluginManager.js"></script>
   <script src="renderer.js"></script>
 </body>
 
