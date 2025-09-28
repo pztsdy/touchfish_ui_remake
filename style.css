@@ -229,6 +229,14 @@ input[type="number"]:focus {
   background: none;
   border: none;
   cursor: pointer;
+  transition: background-color 0.3s ease;
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+
+.icon-btn.pinned {
+  background-color: #E3F2FD;
+  /* 浅蓝色背景 */
   color: #5F6368;
   padding: 5px;
   /* 增加点击区域 */

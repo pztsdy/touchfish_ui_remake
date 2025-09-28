@@ -417,6 +417,13 @@ function createWindow() {
     const notice = await fetchNotice();
     return notice;
   });
+
+  // 处理窗口置顶
+  ipcMain.handle('toggle-window-pin', () => {
+    const isAlwaysOnTop = mainWindow.isAlwaysOnTop();
+    mainWindow.setAlwaysOnTop(!isAlwaysOnTop);
+    return !isAlwaysOnTop;
+  });
 }
 
 app.whenReady().then(createWindow);

@@ -23,6 +23,8 @@ const reportModal = document.getElementById('report-modal');
 const closeReportBtn = document.getElementById('close-report-btn');
 const reportsubmitBtn = document.getElementById('report-submit-btn');
 
+const pinWindowBtn = document.getElementById('pin-window');
+
 const checkUpdateBtn = document.getElementById('check-update');
 const checkUpdateModal = document.getElementById('check-update-modal');
 const closeCheckUpdateBtn = document.getElementById('close-check-update-btn');
@@ -281,6 +283,16 @@ messageInput.addEventListener('keydown', (e) => {
 });
 
 // ---- 模态框功能 ----
+
+// 置顶按钮事件处理
+pinWindowBtn.addEventListener('click', async () => {
+  const isPinned = await window.api.toggleWindowPin();
+  if (isPinned) {
+    pinWindowBtn.classList.add('pinned');
+  } else {
+    pinWindowBtn.classList.remove('pinned');
+  }
+});
 
 settingsBtn.addEventListener('click', () => {
   settingsModal.classList.add('active');

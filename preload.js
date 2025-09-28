@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('api', {
   // 设置功能
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
+  toggleWindowPin: () => ipcRenderer.invoke('toggle-window-pin'),
 
   // 文件传输功能
   selectFile: () => ipcRenderer.invoke('select-file'),
