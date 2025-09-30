@@ -1,0 +1,12 @@
+{
+  "id": "dark-theme",
+  "name": "深色主题",
+  "version": "1.0.0",
+  "author": "示例插件",
+  "desc": "一个简单的深色主题插件示例",
+  "type": "theme",
+  "minAppVersion": "1.0.0",
+  "permissions": ["theme:style"],
+  "style": "theme.css",
+  "screenshots": []
+}

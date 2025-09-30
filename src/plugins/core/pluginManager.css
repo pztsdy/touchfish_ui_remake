@@ -1,0 +1,292 @@
+/* 插件管理模态框样式 */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.modal.active {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: #fff;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.2em;
+  color: #333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  color: #666;
+}
+
+.close-btn:hover {
+  color: #333;
+}
+
+.plugin-actions {
+  padding: 15px 20px;
+  display: flex;
+  gap: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.main-btn {
+  padding: 8px 15px;
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.main-btn:hover {
+  background-color: #1976d2;
+}
+
+.installed-plugins {
+  padding: 20px;
+}
+
+.installed-plugins h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.1em;
+  color: #333;
+}
+
+.plugin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.plugin-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background-color: #f5f5f5;
+  border-radius: 6px;
+  transition: transform 0.2s;
+}
+
+.plugin-item:hover {
+  transform: translateY(-2px);
+}
+
+.plugin-info {
+  flex: 1;
+}
+
+.plugin-info h4 {
+  margin: 0 0 5px 0;
+  font-size: 1em;
+  color: #333;
+}
+
+.plugin-info p {
+  margin: 0 0 5px 0;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.plugin-info small {
+  color: #888;
+  font-size: 0.8em;
+}
+
+.plugin-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+.uninstall-btn {
+  padding: 6px 12px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.uninstall-btn:hover {
+  background-color: #c82333;
+}
+
+/* Toast 消息样式 */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 4px;
+  color: white;
+  font-size: 14px;
+  max-width: 80%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  z-index: 1001;
+  animation: toastSlide 0.15s ease-in, toastFade 0.15s ease-out 1.65s forwards;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.toast.success {
+  background-color: rgba(40, 167, 69, 0.95);
+}
+
+.toast.error {
+  background-color: rgba(220, 53, 69, 0.95);
+}
+
+@keyframes toastSlide {
+  from {
+    transform: translate(-50%, -100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes toastFade {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+}
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #4285F4;
+}
+
+input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+.uninstall-btn {
+  background: none;
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.uninstall-btn:hover {
+  background: #ff4444;
+  color: white;
+}
+
+/* 删除重复的toast样式，因为已经在上面定义过了 */
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .plugin-item {
+    background: #2d2d2d;
+  }
+
+  .plugin-info h5 {
+    color: #d4d4d4;
+  }
+
+  .plugin-info p {
+    color: #a0a0a0;
+  }
+
+  .plugin-info small {
+    color: #808080;
+  }
+
+  .uninstall-btn {
+    border-color: #ff6b6b;
+    color: #ff6b6b;
+  }
+
+  .uninstall-btn:hover {
+    background: #ff6b6b;
+  }
+}

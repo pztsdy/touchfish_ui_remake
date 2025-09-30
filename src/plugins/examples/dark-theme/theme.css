@@ -1,0 +1,68 @@
+/* dark-theme.css */
+body {
+  background-color: #1e1e1e !important;
+  color: #d4d4d4 !important;
+}
+
+.page-container {
+  background: #2d2d2d !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+input[type="text"],
+input[type="number"],
+textarea {
+  background-color: #3c3c3c !important;
+  color: #d4d4d4 !important;
+  border-color: #505050 !important;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+textarea:focus {
+  border-color: #007acc !important;
+  box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2) !important;
+}
+
+.main-btn {
+  background-color: #007acc !important;
+}
+
+.main-btn:hover {
+  background-color: #0098ff !important;
+}
+
+.message-item {
+  background-color: #2d2d2d !important;
+  border-color: #505050 !important;
+}
+
+.message-item.system {
+  background-color: #264f78 !important;
+}
+
+.message-item.broadcast {
+  background-color: #3c522c !important;
+}
+
+.message-item.hint {
+  background-color: #3c3c3c !important;
+}
+
+.modal-content {
+  background-color: #2d2d2d !important;
+  border-color: #505050 !important;
+}
+
+.close-btn {
+  color: #d4d4d4 !important;
+}
+
+.close-btn:hover {
+  background-color: #505050 !important;
+}
+
+/* 代码高亮主题适配 */
+.hljs {
+  background: #1e1e1e !important;
+}
