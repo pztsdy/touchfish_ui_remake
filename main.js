@@ -225,7 +225,7 @@ function createWindow() {
           }
 
           // 处理普通消息
-          if (message.startsWith('欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。')) {
+          if (message.startsWith('[房主提示]')) {
             mainWindow.webContents.send('receive-host-hint', message);
           } else if (message.startsWith('[系统提示]')) {
             mainWindow.webContents.send('receive-system-message', message.substring('[系统提示]'.length).trim());

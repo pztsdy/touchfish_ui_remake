@@ -137,7 +137,7 @@ function displayMessage(msg, type = 'regular', username = null) {
       const prefixMap = {
         'system': '[系统提示]',
         'broadcast': '[房主广播]',
-        'hint': '欢迎加入 TouchFish QQ 群：1056812860，以获得最新资讯。'
+        'hint': '[房主提示]'
       };
 
       const color = colorMap[type] || '#333333';
