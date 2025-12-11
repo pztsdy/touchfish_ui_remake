@@ -1,6 +1,6 @@
 {
   "name": "touchfish-ui-remake",
-  "version": "2.1.0",
+  "version": "2.2.1",
   "description": "A beautiful, modern touchfish client built with Electron.",
   "main": "main.js",
   "type": "module",
@@ -29,16 +29,17 @@
     "markdown-it": "^14.1.0",
     "markdown-it-emoji": "^3.0.0",
     "markdown-it-highlightjs": "^4.2.0",
-    "markdown-it-katex": "^2.0.3",
     "markdown-it-texmath": "^1.0.0",
     "markdown-palettes": "^0.4.13"
   },
   "devDependencies": {
     "electron": "^31.7.7",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "markdown-it-katex": "^2.0.3",
+    "semver": "^7.7.3"
   },
   "build": {
-    "appId": "com.piaoztsdy.touchfish_ui_remake",
+    "appId": "cn.piaoztsdy.touchfish_ui_remake",
     "productName": "Touchfish UI Remake",
     "directories": {
       "output": "build"
@@ -47,6 +48,8 @@
       "target": "nsis"
     },
     "nsis": {
+      "include": "highdpi.nsh",
+      "installerSidebar": "installer-sidebar.bmp",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,

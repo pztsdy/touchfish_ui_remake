@@ -54,10 +54,18 @@ let notifierKeywords = [];
 let fontFamily = 'Maple Mono NF CN Light';
 let fontSize = 16;
 
-let systemColor = '#87CEEB';
-let broadcastColor = '#90EE90';
-let hintColor = '#ADD8E6';
+let systemColor = '#b9ebffff';
+let broadcastColor = '#9fe69fff';
+let hintColor = '#74cae7ff';
 let currentUsername = null;
+
+// 记录最近渲染的一条消息，用于将短时间内同一发送者的多条片段合并为一个消息块
+let lastRenderedMessage = {
+  sender: null,
+  element: null,
+  time: 0,
+  type: null
+};
 
 connectionPage.classList.add('active');
 chatPage.classList.add('hidden');
@@ -71,98 +79,85 @@ function getHHMMSS() {
   return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 }
 
-function displayMessage(msg, type = 'regular', username = null) {
-  // if (!msg || typeof msg !== 'string') return;
+// 修改 displayMessage 函数，接收 sender 和 content
+function displayMessage(content, type = 'regular', sender = null) {
+  if (!content || typeof content !== 'string') return;
 
+  // 过滤文件传输相关的JSON消息
   try {
-    const parsedMsg = JSON.parse(msg);
+    const parsedMsg = JSON.parse(content);
     if (parsedMsg.type === 'FILE_START' || parsedMsg.type === 'FILE_DATA' || parsedMsg.type === 'FILE_END') {
       return; // 不显示文件传输相关内容
     }
   } catch (e) {
-    // 如果解析失败，说明不是JSON格式，继续处理
-    console.log("非JSON消息，继续处理");
+    // 不是JSON，继续处理
   }
-
-  const messageEl = document.createElement('div');
-  messageEl.className = `message-item ${type}`;
 
   const now = new Date();
   const timestamp = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
   const timestampHtml = `<span class="timestamp">${timestamp}</span>`;
 
+  const messageEl = document.createElement('div');
+  messageEl.className = `message-item ${type}`;
+
   const isAtBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 5;
 
-  console.log("处理普通消息");
   try {
-    if (type === 'regular') {
-      // 处理普通消息 - 解析发送者和内容
-      let sender = username || ""; // 不需要有“匿名”，否则服务器有人加入的提示无法正常工作
-      let content = msg;
+    if (type === 'regular' || type === 'self') { // 包含 'self' 类型
+      // 处理普通消息和自己发送的消息
+      const actualSender = sender || currentUsername || "通知"; // 如果是自己发的，sender 可能为空，用 currentUsername
+      const isSelfMessage = actualSender === currentUsername;
 
-      // 如果消息包含标准格式 "用户名: 内容"
-      if (msg.includes(': ')) {
-        const colonIndex = msg.indexOf(': ');
-        const potentialSender = msg.substring(0, colonIndex);
-        // 简单验证发送者名称（避免误解析）
-        if (potentialSender.length > 0 && potentialSender.length < 30) {
-          sender = potentialSender;
-          content = msg.substring(colonIndex + 2);
+      // 对内容进行预处理，确保换行符被正确处理（但保留Markdown格式）
+      // 注意：这里不替换 <br>，因为 markdown-it 会处理换行
+      const processedContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+      window.api.markdownit(processedContent).then(rendered => {
+        if (isSelfMessage) {
+          // 自己的消息使用 'self' 样式
+          messageEl.innerHTML = `${timestampHtml} <strong class="sender self">${actualSender}:</strong> <span class="msg-text">${rendered}</span>`;
+        } else {
+          // 其他人的消息使用 'regular' 样式
+          messageEl.innerHTML = `${timestampHtml} <strong class="sender">${actualSender}:</strong> <span class="msg-text">${rendered}</span>`;
         }
-      }
-
-      // 渲染Markdown内容（已包含数学公式和代码高亮）
-      window.api.markdownit(content).then(rendered => {
-        messageEl.innerHTML = `${timestampHtml} <strong class="sender">${sender}:</strong> <span class="msg-text">${rendered}</span>`;
         messagesDiv.appendChild(messageEl);
-        console.log("渲染...");
-        console.log(msg);
         if (isAtBottom) messagesDiv.scrollTop = messagesDiv.scrollHeight;
       }).catch(error => {
-        // Markdown渲染失败时的降级处理
+        // 如果 markdown 渲染失败，使用 <br> 替换换行符并转义HTML
         console.error('Markdown渲染失败:', error);
-        messageEl.innerHTML = `${timestampHtml} <strong class="sender">${sender}:</strong> <span class="msg-text">${escapeHtml(content)}</span>`;
+        const textWithLineBreaks = escapeHtml(processedContent).replace(/\n/g, '<br>');
+        if (isSelfMessage) {
+          messageEl.innerHTML = `${timestampHtml} <strong class="sender self">${actualSender}:</strong> <span class="msg-text">${textWithLineBreaks}</span>`;
+        } else {
+          messageEl.innerHTML = `${timestampHtml} <strong class="sender">${actualSender}:</strong> <span class="msg-text">${textWithLineBreaks}</span>`;
+        }
         messagesDiv.appendChild(messageEl);
         if (isAtBottom) messagesDiv.scrollTop = messagesDiv.scrollHeight;
       });
 
     } else {
       // 处理系统消息、广播消息等（保持原有逻辑）
-      const colorMap = {
-        'system': systemColor,
-        'broadcast': broadcastColor,
-        'hint': hintColor
-      };
-
-      const prefixMap = {
-        'system': '[系统提示]',
-        'broadcast': '[房主广播]',
-        'hint': '[房主提示]'
-      };
-
+      const colorMap = { 'system': systemColor, 'broadcast': broadcastColor, 'hint': hintColor };
+      const prefixMap = { 'system': '[系统提示]', 'broadcast': '[房主广播]', 'hint': '[房主提示]' };
       const color = colorMap[type] || '#333333';
       const prefix = prefixMap[type] || '';
 
-      let displayedContent = msg;
-
-      // 如果消息以特定前缀开头，进行特殊处理
-      if (prefix && msg.startsWith(prefix)) {
-        const contentWithoutPrefix = msg.substring(prefix.length).trim();
+      let displayedContent = content;
+      if (prefix && content.startsWith(prefix)) {
+        const contentWithoutPrefix = content.substring(prefix.length).trim();
         displayedContent = `<span style="color:${color}; font-weight: bold;">${prefix}</span> ${escapeHtml(contentWithoutPrefix)}`;
       } else {
-        displayedContent = `<span style="color:${color};">${escapeHtml(msg)}</span>`;
+        displayedContent = `<span style="color:${color};">${escapeHtml(content)}</span>`;
       }
 
       messageEl.innerHTML = `${timestampHtml} ${displayedContent}`;
       messagesDiv.appendChild(messageEl);
+      // 非regular消息不参与合并，清除 lastRenderedMessage
+      lastRenderedMessage = { sender: null, element: null, time: 0, type: null };
       if (isAtBottom) messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
   } catch (error) {
     console.error('消息显示错误:', error);
-    // 最后的降级处理
-    messageEl.innerHTML = `${timestampHtml} <span class="error-msg">消息显示错误</span>`;
-    messagesDiv.appendChild(messageEl);
-    if (isAtBottom) messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
 }
 
@@ -188,30 +183,35 @@ window.api.onConnectionError((errorMsg) => {
 });
 
 window.api.onReceiveMessage((message) => {
-  // 解析发送者和内容
-  let sender = "";
-  let content = message;
+  // 不是字符串消息直接返回
+  if (typeof message !== 'string') return;
 
-  if (message.includes(': ')) {
-    const colonIndex = message.indexOf(': ');
-    sender = message.substring(0, colonIndex);
-    content = message.substring(colonIndex + 2);
-
-    // 检查是否是自己发送的消息
-    if (sender === currentUsername) {
-      displayMessage(message, 'regular');
-      return;
-    }
+  // 检查消息格式: "用户名: 内容" (冒号后必须有一个空格)
+  const match = message.match(/^([^:]+):\s+([\s\S]*)$/); // 修改正则表达式，要求冒号后至少一个空格
+  if (!match) {
+    // 如果不符合 "用户名: 内容" 格式（冒号后无空格或无冒号），直接显示原消息作为系统消息
+    displayMessage(message, 'system'); // 或者可以显示为 'regular'，取决于期望行为
+    return;
   }
 
-  // 显示消息
-  displayMessage(message, 'regular');
+  const [, sender, content] = match;
+
+  // 判断是否是自己发送的消息
+  if (sender === currentUsername) {
+    // 自己发送的消息，只在本地显示，不再通过 onReceiveMessage 传来，所以理论上不会走到这里
+    // 但为了逻辑完整，如果传来，也显示
+    displayMessage(content, 'self', sender); // 传递 sender 和类型 'self'
+    return;
+  }
+
+  // 非自己发送的消息，使用普通样式
+  displayMessage(content, 'regular', sender); // 传递 sender
 
   // 处理通知
   if (notifierEnabled || bellEnabled) {
-    const hasKeywords = notifierKeywords.length === 0 || 
-                       notifierKeywords.some(keyword => content.toLowerCase().includes(keyword.toLowerCase()));
-    
+    const hasKeywords = notifierKeywords.length === 0 ||
+      notifierKeywords.some(keyword => content.toLowerCase().includes(keyword.toLowerCase()));
+
     if (hasKeywords) {
       // 发送系统通知
       if (notifierEnabled && 'Notification' in window && Notification.permission === 'granted') {
@@ -234,6 +234,7 @@ window.api.onReceiveMessage((message) => {
     }
   }
 });
+
 
 window.api.onReceiveHostHint((message) => {
   displayMessage(message, 'hint');
@@ -264,20 +265,31 @@ connectBtn.addEventListener('click', () => {
   window.api.connectToServer({ ip, port, username });
 });
 
+function processAndSendMessage(rawMessage) {
+  if (!rawMessage || !currentUsername) return;
+
+  // 准备发送的完整消息（冒号后跟一个空格）
+  const fullMessage = `${currentUsername}: ${rawMessage}`; // 确保冒号后有空格
+
+  // 发送完整消息
+  window.api.sendMessage(fullMessage);
+  mdEditor.content = ""; // 发送后清空编辑器
+
+  // 本地显示自己发送的消息 (可选，如果服务器不回显)
+  // displayMessage(rawMessage, 'self', currentUsername);
+}
+
 sendBtn.addEventListener('click', () => {
   const message = mdEditor.content.trim();
   if (!message) return;
-  // console.log(currentUsername);
-  window.api.sendMessage(`${currentUsername}: ${message}`);
-  mdEditor.content = ""; // 发送后清空编辑器
+  processAndSendMessage(message);
 });
 
 messageInput.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key === 'Enter') {
     const message = mdEditor.content.trim();
     if (!message) return;
-    window.api.sendMessage(`${currentUsername}: ${message}`);
-    mdEditor.content = "";
+    processAndSendMessage(message);
     e.preventDefault();
   }
 });
@@ -332,7 +344,7 @@ closeNoticeBtn.addEventListener('click', () => {
 checkUpdateBtn.addEventListener('click', () => {
   checkUpdateModal.classList.add('active');
   window.api.checkForUpdates().then(({ latestRemakeVersion, currentVersion, hasUpdate }) => {
-    if (!hasUpdate) {
+    if (hasUpdate) { // 修正逻辑：有更新时显示新版本信息
       checkUpdateContent.innerText = `发现新版本: ${latestRemakeVersion}\n当前版本: ${currentVersion}`;
     } else {
       checkUpdateContent.innerText = `当前已是最新版本: ${currentVersion}`;
@@ -378,7 +390,7 @@ if (fileBtn) {
       // 立即标记为正在发送，防止自收自发
       isSendingFile = true;
       showFileProgress('准备发送文件...');
-      
+
       const success = await window.api.sendFile(filePath);
       if (!success) {
         displayMessage(`[系统提示] 文件发送失败`, 'system');
@@ -440,8 +452,8 @@ window.api.onFileReceiveRequest((fileInfo) => {
   }
 
   const size = fileInfo.size;
-  const sizeStr = size > 1024 * 1024 
-    ? `${(size / 1024 / 1024).toFixed(2)}MB` 
+  const sizeStr = size > 1024 * 1024
+    ? `${(size / 1024 / 1024).toFixed(2)}MB`
     : `${(size / 1024).toFixed(2)}KB`;
 
   const shouldReceive = confirm(
@@ -467,10 +479,10 @@ window.api.onFileReceiveProgress((progress) => {
 
 window.api.onFileReceiveComplete((fileData) => {
   if (!isReceivingFile) return;
-  
+
   updateFileProgress('文件接收完成！请选择保存位置...', 100);
   displayMessage('[系统提示] 文件接收完成，请选择保存位置...', 'system');
-  
+
   window.api.saveFile({
     name: fileData.name,
     data: fileData.data
@@ -518,7 +530,6 @@ if (closeSettingsBtn) {
     settingsModal.classList.remove('active');
   });
 }
-
 
 
 document.getElementById('system-color').addEventListener('input', () => updateColor('system'));

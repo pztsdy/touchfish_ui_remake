@@ -266,18 +266,20 @@ input[type="number"]:focus {
   line-height: 1.5;
   word-wrap: break-word;
   white-space: pre-wrap;
-  /* 保留多行文本的换行 */
   margin-bottom: 8px;
   padding: 5px 8px;
   border-radius: 6px;
   background-color: #E8F0FE;
-  /* 默认消息背景 */
   color: #3C4043;
 }
 
 .message-item.regular {
   background-color: #E8F0FE;
-  /* 正常消息的背景色 */
+}
+
+/* 自己发送的消息使用黄色背景 */
+.message-item.self {
+  background-color: #FFF8E1;
 }
 
 .message-item.system {
@@ -427,6 +429,7 @@ input[type="number"]:focus {
 
 .message-item p {
   margin: 0;
+  padding: 0;
 }
 
 .message-item pre {

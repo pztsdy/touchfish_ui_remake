@@ -49,8 +49,8 @@ async function initializeMarkdown() {
       displayMode: false,
       strict: false,
       output: 'mathml',
-      maxSize: 5000, // 增加最大尺寸限制
-      maxDepth: 200, // 增加最大深度限制
+      maxSize: 5000,
+      maxDepth: 250,
     };
 
     md = new MarkdownIt({
@@ -88,7 +88,7 @@ async function initializeMarkdown() {
 
 async function fetchLatestVersion() {
   try {
-    const response = await axios.get("https://bopid.cn/chat/newest_version_chat.html");
+    const response = await axios.get("https://www.bopid.cn/chat/newest_version_chat.html");
     return response.data.trim();
   } catch (error) {
     console.error('Failed to fetch latest version:', error);
@@ -98,7 +98,7 @@ async function fetchLatestVersion() {
 
 async function fetchCanServeVersion() {
   try {
-    const response = await axios.get("https://www.piaoztsdy.cn/touchfishui.txt");
+    const response = await axios.get("https://api.piaoztsdy.cn/touchfishui.txt");
     return response.data.trim();
   } catch (error) {
     console.error('Failed to fetch can serve version:', error);
@@ -122,7 +122,7 @@ async function fetchUIRemakeLatestVersion() {
 
 async function fetchNotice() {
   try {
-    const response = await axios.get("https://www.piaoztsdy.cn/tfurnotice.txt");
+    const response = await axios.get("https://api.piaoztsdy.cn/tfurnotice.txt");
     // 用||分割通知内容
     return response.data.split('||');
   } catch (error) {
@@ -203,37 +203,103 @@ function createWindow() {
       });
 
       let buffer = '';
+      let isCollectingMessage = false;
+      let currentMessage = '';
+      let currentSender = '';
 
       clientSocket.on('data', (data) => {
-        console.log("Message!");
+        console.log("Message received!");
         buffer += data.toString('utf-8');
 
-        let boundary = buffer.indexOf('\n');
-        while (boundary !== -1) {
-          const message = buffer.substring(0, boundary).trim();
-          buffer = buffer.substring(boundary + 1);
-          boundary = buffer.indexOf('\n');
+        // 标记特殊消息的正则表达式
+        const specialMessageRegex = /^\[(房主提示|系统提示|房主广播)\]/;
+        const fileMessageRegex = /^\{.*\}$/;
 
-          if (message.startsWith('{') && message.endsWith('}')) {
-            try {
-              const msgData = JSON.parse(message);
-              handleFileMessage(msgData);
-              continue;
-            } catch (e) {
-              console.error('JSON解析失败:', e);
+        while (buffer.length > 0) {
+          if (!isCollectingMessage) {
+            // 查找新消息的开始
+            if (buffer.includes('\n')) {
+              const firstLine = buffer.substring(0, buffer.indexOf('\n')).trim();
+              
+              // 检查是否是文件传输的JSON消息
+              if (firstLine.match(fileMessageRegex)) {
+                const message = buffer.substring(0, buffer.indexOf('\n'));
+                buffer = buffer.substring(buffer.indexOf('\n') + 1);
+                try {
+                  const msgData = JSON.parse(message);
+                  handleFileMessage(msgData);
+                } catch (e) {
+                  console.error('JSON解析失败:', e);
+                }
+                continue;
+              }
+
+              // 检查特殊消息（系统消息、提示等）
+              if (firstLine.match(specialMessageRegex)) {
+                const message = buffer.substring(0, buffer.indexOf('\n'));
+                buffer = buffer.substring(buffer.indexOf('\n') + 1);
+
+                if (message.startsWith('[房主提示]')) {
+                  mainWindow.webContents.send('receive-host-hint', message);
+                } else if (message.startsWith('[系统提示]')) {
+                  mainWindow.webContents.send('receive-system-message', message.substring('[系统提示]'.length).trim());
+                } else if (message.startsWith('[房主广播]')) {
+                  mainWindow.webContents.send('receive-broadcast-message', message.substring('[房主广播]'.length).trim());
+                }
+                continue;
+              }
+
+              // 检查普通消息的格式（用户名: 内容）
+              const colonIndex = firstLine.indexOf(': ');
+              if (colonIndex > 0) {
+                currentSender = firstLine.substring(0, colonIndex);
+                currentMessage = firstLine;
+                buffer = buffer.substring(buffer.indexOf('\n') + 1);
+                isCollectingMessage = true;
+                continue;
+              }
+
+              // 如果不符合任何格式，直接发送并移除
+              const message = buffer.substring(0, buffer.indexOf('\n'));
+              buffer = buffer.substring(buffer.indexOf('\n') + 1);
+              mainWindow.webContents.send('receive-message', message);
+            } else {
+              // 等待更多数据
+              break;
+            }
+          } else {
+            // 正在收集多行消息
+            const nextNewline = buffer.indexOf('\n');
+            if (nextNewline === -1) {
+              // 等待更多数据
+              break;
+            }
+
+            const line = buffer.substring(0, nextNewline).trim();
+            buffer = buffer.substring(nextNewline + 1);
+
+            // 检查是否是新消息的开始
+            if (line.includes(': ')) {
+              // 发送之前收集的消息
+              mainWindow.webContents.send('receive-message', currentMessage);
+              // 开始新消息
+              currentMessage = line;
+              isCollectingMessage = false;
+            } else {
+              // 继续收集当前消息，只在非空行时添加换行
+              if (line) {
+                currentMessage += '\n' + line;
+              }
             }
           }
+        }
 
-          // 处理普通消息
-          if (message.startsWith('[房主提示]')) {
-            mainWindow.webContents.send('receive-host-hint', message);
-          } else if (message.startsWith('[系统提示]')) {
-            mainWindow.webContents.send('receive-system-message', message.substring('[系统提示]'.length).trim());
-          } else if (message.startsWith('[房主广播]')) {
-            mainWindow.webContents.send('receive-broadcast-message', message.substring('[房主广播]'.length).trim());
-          } else {
-            mainWindow.webContents.send('receive-message', message);
-          }
+        // 如果缓冲区清空且正在收集消息，发送最后一条消息
+        if (buffer.length === 0 && isCollectingMessage) {
+          // 移除可能的末尾空行后发送
+          mainWindow.webContents.send('receive-message', currentMessage.replace(/\n+$/, ''));
+          isCollectingMessage = false;
+          currentMessage = '';
         }
       });
 
@@ -376,8 +442,13 @@ function createWindow() {
 
   ipcMain.on('send-message', (event, message) => {
     if (clientSocket) {
-      console.log("Sended.")
-      clientSocket.write(message + '\n'); // 发送给服务器
+      // 标准化换行符并去除末尾空行
+      const normalizedMessage = message
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .replace(/\n+$/, ''); // 移除末尾的空行
+      console.log("Sending message...");
+      clientSocket.write(normalizedMessage + '\n'); // 发送给服务器
     }
   });
 
@@ -402,7 +473,7 @@ function createWindow() {
       return md.render(text);
     } catch (error) {
       console.error('Markdown渲染错误:', error);
-      return text;
+      return text + "\n\n<h2 style=\"color: red;\">⚠警告：Markdown渲染失败！</h2>";
     }
   });
 
